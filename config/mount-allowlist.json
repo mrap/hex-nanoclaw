@@ -1,8 +1,9 @@
 {
-  "allowedPaths": [
-    "~/mrap-hex",
-    "~/.boi/queue",
-    "~/.hex-events"
+  "allowedRoots": [
+    { "path": "~/mrap-hex", "allowReadWrite": true, "description": "hex agent workspace" },
+    { "path": "~/.boi/queue", "allowReadWrite": true, "description": "BOI spec queue" },
+    { "path": "~/.hex-events", "allowReadWrite": false, "description": "hex-events (read-only, emit via IPC)" }
   ],
-  "comment": "Copy to ~/.config/nanoclaw/mount-allowlist.json and adjust paths for your system"
+  "blockedPatterns": [],
+  "nonMainReadOnly": true
 }

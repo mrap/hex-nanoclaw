@@ -25,7 +25,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     git \
     python3 \
-    python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
 # Set Chromium path for agent-browser

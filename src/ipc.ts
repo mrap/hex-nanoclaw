@@ -1,3 +1,4 @@
+import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
@@ -26,19 +27,81 @@ export interface IpcDeps {
 }
 
 // hex-specific: Allowlisted commands for shell_command IPC type.
-// SECURITY: Only these exact command prefixes are permitted.
+// SECURITY: Each entry defines the exact binary and fixed prefix args.
+// The handler uses spawnSync with an explicit argv array (no shell).
 // Adding to this list requires security review.
-const SHELL_COMMAND_ALLOWLIST: string[] = [
-  'python3 ~/.boi/lib/coordination.py',
-  'bash ~/.boi/boi dispatch',
-  'python3 ~/.hex-events/hex_emit.py',
+interface AllowedCommand {
+  binary: string;
+  fixedArgs: string[];
+  label: string;
+}
+
+const SHELL_COMMAND_ALLOWLIST: AllowedCommand[] = [
+  {
+    binary: 'python3',
+    fixedArgs: [
+      `${process.env.HOME}/.boi/lib/coordination.py`,
+    ],
+    label: 'coordination',
+  },
+  {
+    binary: 'bash',
+    fixedArgs: [
+      `${process.env.HOME}/.boi/boi`,
+      'dispatch',
+    ],
+    label: 'boi-dispatch',
+  },
+  {
+    binary: 'python3',
+    fixedArgs: [
+      `${process.env.HOME}/.hex-events/hex_emit.py`,
+    ],
+    label: 'hex-emit',
+  },
 ];
 
-function isShellCommandAllowed(command: string): boolean {
-  const normalized = command.trim();
-  return SHELL_COMMAND_ALLOWLIST.some((prefix) =>
-    normalized.startsWith(prefix),
-  );
+const MAX_SHELL_TIMEOUT_S = 30;
+
+export function parseShellCommand(
+  command: string,
+): { binary: string; args: string[]; label: string } | null {
+  const parts = command.trim().split(/\s+/);
+  if (parts.length === 0) return null;
+
+  for (const allowed of SHELL_COMMAND_ALLOWLIST) {
+    const prefixParts = [allowed.binary, ...allowed.fixedArgs];
+    if (parts.length < prefixParts.length) continue;
+
+    const matches = prefixParts.every((p, i) => {
+      // Expand ~ in the allowlist for comparison
+      const expanded = p.replace(/^~/, process.env.HOME || '');
+      const inputExpanded = parts[i].replace(/^~/, process.env.HOME || '');
+      return expanded === inputExpanded;
+    });
+
+    if (matches) {
+      // Validate remaining args contain no shell metacharacters
+      const userArgs = parts.slice(prefixParts.length);
+      const shellMeta = /[;&|`$(){}[\]<>!#\\]/;
+      for (const arg of userArgs) {
+        if (shellMeta.test(arg)) {
+          return null; // Reject args with shell metacharacters
+        }
+      }
+      return {
+        binary: allowed.binary,
+        args: [
+          ...allowed.fixedArgs.map((a) =>
+            a.replace(/^~/, process.env.HOME || ''),
+          ),
+          ...userArgs,
+        ],
+        label: allowed.label,
+      };
+    }
+  }
+  return null;
 }
 
 let ipcWatcherRunning = false;
@@ -482,34 +545,47 @@ export async function processTaskIpc(
       break;
 
     case 'shell_command': {
-      // hex-specific: Execute allowlisted host commands from container IPC
+      // hex-specific: Execute allowlisted host commands from container IPC.
+      // SECURITY: Only main group can execute. Uses spawnSync (no shell).
+      if (!isMain) {
+        logger.warn(
+          { sourceGroup },
+          'shell_command BLOCKED: non-main group',
+        );
+        break;
+      }
       const command = data.command;
-      const timeout = data.timeout ?? 10;
+      const timeout = Math.min(
+        (data.timeout as number) ?? 10,
+        MAX_SHELL_TIMEOUT_S,
+      );
       if (!command || typeof command !== 'string') {
         logger.error('shell_command: missing or invalid command field');
         break;
       }
-      if (!isShellCommandAllowed(command)) {
+      const parsed = parseShellCommand(command);
+      if (!parsed) {
         logger.error(
           { command: command.substring(0, 80) },
-          'shell_command BLOCKED: not in allowlist',
+          'shell_command BLOCKED: not in allowlist or contains shell metacharacters',
         );
         break;
       }
       try {
-        const { execSync } = await import('child_process');
-        const result = execSync(command, {
+        // spawnSync with explicit argv — no shell interpretation
+        spawnSync(parsed.binary, parsed.args, {
           timeout: timeout * 1000,
           encoding: 'utf-8',
           stdio: ['pipe', 'pipe', 'pipe'],
+          shell: false,
         });
         logger.info(
-          { command: command.substring(0, 50) },
+          { label: parsed.label },
           'shell_command executed',
         );
       } catch (err: any) {
         logger.error(
-          { command: command.substring(0, 50), error: err.message },
+          { label: parsed.label, error: err.message },
           'shell_command failed',
         );
       }
