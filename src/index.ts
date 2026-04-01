@@ -786,16 +786,7 @@ async function main(): Promise<void> {
   const runPolicyEngine = async () => {
     try {
       const policies = policyLoader.loadAll();
-      const result = await policyEngine.processOnce(policies);
-
-      // Handle oneshot-delete: remove policies that fired
-      for (const name of result.deletedPolicies) {
-        eventStore.deletePolicy(name);
-      }
-      // Handle oneshot-disable: persist disabled state
-      for (const name of result.disabledPolicies) {
-        eventStore.disablePolicy(name);
-      }
+      await policyEngine.processOnce(policies);
 
       // Process deferred events
       policyEngine.processDeferredOnce();
