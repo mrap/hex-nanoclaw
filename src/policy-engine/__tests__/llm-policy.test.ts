@@ -70,6 +70,70 @@ rules:
     const errors = validatePolicyYaml(yaml);
     expect(errors.length).toBeGreaterThan(0);
   });
+
+  it('rejects emit action without event field', () => {
+    const yaml = `
+name: missing-event
+rules:
+  - name: r1
+    trigger:
+      event: x
+    actions:
+      - type: emit
+`;
+    const errors = validatePolicyYaml(yaml);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]).toContain('event');
+  });
+
+  it('rejects schedule action without required fields', () => {
+    const yaml = `
+name: missing-schedule-fields
+rules:
+  - name: r1
+    trigger:
+      event: x
+    actions:
+      - type: schedule
+`;
+    const errors = validatePolicyYaml(yaml);
+    expect(errors.length).toBeGreaterThanOrEqual(2); // missing group and prompt
+  });
+
+  it('rejects rule without name', () => {
+    const yaml = `
+name: no-rule-name
+rules:
+  - trigger:
+      event: x
+    actions:
+      - type: emit
+        event: y
+`;
+    const errors = validatePolicyYaml(yaml);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]).toContain('name');
+  });
+
+  it('returns error for malformed YAML', () => {
+    const yaml = `
+name: bad
+  rules:
+    - this is: [broken
+`;
+    const errors = validatePolicyYaml(yaml);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0]).toContain('YAML');
+  });
+
+  it('rejects empty rules array', () => {
+    const yaml = `
+name: empty-rules
+rules: []
+`;
+    const errors = validatePolicyYaml(yaml);
+    expect(errors.length).toBeGreaterThan(0);
+  });
 });
 
 describe('buildPolicyPrompt', () => {
