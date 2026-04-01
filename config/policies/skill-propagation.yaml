@@ -12,7 +12,7 @@ rules:
         value: "ops"
     actions:
       - type: message
-        chat_jid: "{{ops_chat_jid}}"
+        jid: "{{ops_chat_jid}}"
         text: |
           New skill created by {{payload.group}}: {{payload.skill_name}}
           Scan verdict: {{payload.scan_verdict}}
