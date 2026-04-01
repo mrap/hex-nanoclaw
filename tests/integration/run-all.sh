@@ -38,6 +38,7 @@ run_ts "Engine Lifecycle" "$SCRIPT_DIR/test-engine-lifecycle.ts"
 run_sh "CLI Emitter" "$SCRIPT_DIR/test-cli-emitter.sh"
 run_ts "IPC Emit" "$SCRIPT_DIR/test-ipc-emit.ts"
 run_ts "Cross-System Flow" "$SCRIPT_DIR/test-cross-system-flow.ts"
+run_ts "Phase 2 Policies" "$SCRIPT_DIR/test-phase2-policies.ts"
 
 echo ""
 echo "=== RESULTS ==="
