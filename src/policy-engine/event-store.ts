@@ -115,6 +115,12 @@ export class EventStore {
       cancelDeferred: db.prepare(
         `DELETE FROM deferred_events WHERE cancel_group = ?`,
       ),
+      disablePolicy: db.prepare(
+        `UPDATE policies SET enabled = 0, updated_at = datetime('now') WHERE name = ?`,
+      ),
+      deletePolicy: db.prepare(
+        `DELETE FROM policies WHERE name = ?`,
+      ),
     };
   }
 
@@ -143,7 +149,7 @@ export class EventStore {
     return this.stmts.getUnprocessed.all(limit) as Event[];
   }
 
-  markProcessed(eventId: number, _matchedPolicies: string[]): void {
+  markProcessed(eventId: number): void {
     this.stmts.markProcessed.run(eventId);
   }
 
@@ -204,8 +210,10 @@ export class EventStore {
     fireAt: string,
     cancelGroup?: string,
   ): void {
-    // Normalize ISO timestamps to SQLite datetime format
-    const normalizedFireAt = fireAt.replace('T', ' ').replace('Z', '').replace(/\.\d{3}$/, '');
+    const normalizedFireAt = fireAt
+      .replace('T', ' ')
+      .replace('Z', '')
+      .replace(/\.\d{3}$/, '');
     this.stmts.addDeferred.run(
       eventType,
       JSON.stringify(payload),
@@ -241,6 +249,14 @@ export class EventStore {
     this.stmts.cancelDeferred.run(cancelGroup);
   }
 
+  disablePolicy(name: string): void {
+    this.stmts.disablePolicy.run(name);
+  }
+
+  deletePolicy(name: string): void {
+    this.stmts.deletePolicy.run(name);
+  }
+
   getEnabledPolicies(): Array<{
     name: string;
     yaml_content: string;
@@ -249,9 +265,9 @@ export class EventStore {
     fire_count: number;
     max_fires: number | null;
   }> {
-    return this.db.prepare(
-      `SELECT * FROM policies WHERE enabled = 1`,
-    ).all() as Array<{
+    return this.db
+      .prepare(`SELECT * FROM policies WHERE enabled = 1`)
+      .all() as Array<{
       name: string;
       yaml_content: string;
       source: string;

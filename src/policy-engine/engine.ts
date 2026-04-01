@@ -1,8 +1,6 @@
 import { minimatch } from 'minimatch';
 
-import type {
-  Policy, ParsedEvent, Action,
-} from './types.js';
+import type { Policy, ParsedEvent, Action } from './types.js';
 import type { EventStore } from './event-store.js';
 import { evaluateConditions } from './conditions.js';
 import { executeEmit } from './actions/emit.js';
@@ -17,16 +15,28 @@ export interface EngineDeps {
   scheduleDeps?: ScheduleDeps;
 }
 
+export interface ProcessResult {
+  /** Policy names that should be deleted (oneshot-delete lifecycle). */
+  deletedPolicies: string[];
+  /** Policy names that were disabled (oneshot-disable lifecycle). */
+  disabledPolicies: string[];
+}
+
 export class PolicyEngine {
   private fireTimestamps = new Map<string, number[]>();
+  private disabledPolicies = new Set<string>();
 
   constructor(
     private store: EventStore,
     private deps: EngineDeps,
   ) {}
 
-  processOnce(policies: Policy[]): void {
+  async processOnce(policies: Policy[]): Promise<ProcessResult> {
     const events = this.store.getUnprocessed(50);
+    const result: ProcessResult = {
+      deletedPolicies: [],
+      disabledPolicies: [],
+    };
 
     for (const rawEvent of events) {
       const event: ParsedEvent = {
@@ -37,14 +47,15 @@ export class PolicyEngine {
         created_at: rawEvent.created_at,
       };
 
-      const matchedPolicies: string[] = [];
-
       for (const policy of policies) {
         if (!policy.enabled) continue;
+        if (this.disabledPolicies.has(policy.name)) continue;
 
         for (const rule of policy.rules) {
-          // Trigger matching (glob)
-          const triggerMatched = minimatch(event.event_type, rule.trigger.event);
+          const triggerMatched = minimatch(
+            event.event_type,
+            rule.trigger.event,
+          );
 
           if (!triggerMatched) {
             this.store.logEval({
@@ -60,7 +71,6 @@ export class PolicyEngine {
             continue;
           }
 
-          // Condition evaluation
           const { passed, details } = evaluateConditions(
             rule.conditions ?? [],
             event.payload,
@@ -81,7 +91,6 @@ export class PolicyEngine {
             continue;
           }
 
-          // Rate limit check
           if (this.isRateLimited(policy)) {
             this.store.logEval({
               event_id: event.id,
@@ -96,13 +105,11 @@ export class PolicyEngine {
             continue;
           }
 
-          // Execute actions
-          matchedPolicies.push(policy.name);
           this.recordFire(policy.name);
 
           for (const action of rule.actions) {
             const start = Date.now();
-            const result = this.executeAction(action, event.payload);
+            const actionResult = await this.executeAction(action, event.payload);
             const duration = Date.now() - start;
 
             this.store.logAction({
@@ -111,8 +118,8 @@ export class PolicyEngine {
               rule_name: rule.name,
               action_type: action.type,
               action_detail: JSON.stringify(action),
-              status: result.status,
-              error_message: result.error ?? null,
+              status: actionResult.status,
+              error_message: actionResult.error ?? null,
               duration_ms: duration,
             });
           }
@@ -128,15 +135,24 @@ export class PolicyEngine {
             action_taken: true,
           });
 
-          // Lifecycle handling
           if (policy.lifecycle === 'oneshot-disable') {
             policy.enabled = false;
+            this.disabledPolicies.add(policy.name);
+            this.store.disablePolicy(policy.name);
+            result.disabledPolicies.push(policy.name);
+          } else if (policy.lifecycle === 'oneshot-delete') {
+            policy.enabled = false;
+            this.disabledPolicies.add(policy.name);
+            this.store.deletePolicy(policy.name);
+            result.deletedPolicies.push(policy.name);
           }
         }
       }
 
-      this.store.markProcessed(event.id, matchedPolicies);
+      this.store.markProcessed(event.id);
     }
+
+    return result;
   }
 
   processDeferredOnce(): void {
@@ -151,10 +167,10 @@ export class PolicyEngine {
     }
   }
 
-  private executeAction(
+  private async executeAction(
     action: Action,
     payload: Record<string, unknown>,
-  ): { status: 'success' | 'error'; error?: string } {
+  ): Promise<{ status: 'success' | 'error'; error?: string }> {
     switch (action.type) {
       case 'emit':
         return executeEmit(action, payload, this.store);
@@ -166,12 +182,14 @@ export class PolicyEngine {
         }
         return executeSchedule(action, payload, this.deps.scheduleDeps);
       case 'message':
-        // Fire and forget — wrap async in sync interface
-        executeMessage(action, payload, { sendMessage: this.deps.sendMessage })
-          .catch(err => logger.error({ err, action }, 'Message action failed'));
-        return { status: 'success' };
+        return executeMessage(action, payload, {
+          sendMessage: this.deps.sendMessage,
+        });
       default:
-        return { status: 'error', error: `Unknown action type: ${(action as Action).type}` };
+        return {
+          status: 'error',
+          error: `Unknown action type: ${(action as Action).type}`,
+        };
     }
   }
 
@@ -181,7 +199,7 @@ export class PolicyEngine {
     const windowSeconds = parseDurationSeconds(policy.rate_limit.window);
     const cutoff = Date.now() - windowSeconds * 1000;
     const timestamps = this.fireTimestamps.get(policy.name) ?? [];
-    const recent = timestamps.filter(t => t >= cutoff);
+    const recent = timestamps.filter((t) => t >= cutoff);
 
     return recent.length >= policy.rate_limit.max_fires;
   }
@@ -189,7 +207,6 @@ export class PolicyEngine {
   private recordFire(policyName: string): void {
     const timestamps = this.fireTimestamps.get(policyName) ?? [];
     timestamps.push(Date.now());
-    // Keep only last 100 timestamps to avoid memory growth
     if (timestamps.length > 100) timestamps.splice(0, timestamps.length - 100);
     this.fireTimestamps.set(policyName, timestamps);
   }

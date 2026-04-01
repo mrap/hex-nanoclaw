@@ -130,15 +130,61 @@ rules:
     let policies = loader.loadAll();
     expect(policies[0].rules[0].trigger.event).toBe('first');
 
-    // Modify the file
     const yaml2 = yaml1.replace('first', 'second');
     fs.writeFileSync(filePath, yaml2);
 
-    // Force mtime change detection
     const stat = fs.statSync(filePath);
     fs.utimesSync(filePath, stat.atime, new Date(stat.mtimeMs + 1000));
 
     policies = loader.loadAll();
     expect(policies[0].rules[0].trigger.event).toBe('second');
+  });
+
+  it('uses cached policies when file has not changed', () => {
+    const yaml = `
+name: cached-test
+lifecycle: persistent
+enabled: true
+rules:
+  - name: r
+    trigger:
+      event: test
+    actions:
+      - type: emit
+        event: y
+`;
+    fs.writeFileSync(path.join(tmpDir, 'cached.yaml'), yaml);
+
+    const loader = new PolicyLoader(tmpDir, store);
+    const first = loader.loadAll();
+    const second = loader.loadAll();
+
+    expect(first).toHaveLength(1);
+    expect(second).toHaveLength(1);
+    expect(first[0].name).toBe(second[0].name);
+  });
+
+  it('skips unknown action types instead of creating shell echo', () => {
+    const yaml = `
+name: unknown-action
+lifecycle: persistent
+enabled: true
+rules:
+  - name: r
+    trigger:
+      event: test
+    actions:
+      - type: unknown_type
+        foo: bar
+      - type: emit
+        event: valid
+`;
+    fs.writeFileSync(path.join(tmpDir, 'unknown.yaml'), yaml);
+
+    const loader = new PolicyLoader(tmpDir, store);
+    const policies = loader.loadAll();
+
+    expect(policies[0].rules[0].actions).toHaveLength(1);
+    expect(policies[0].rules[0].actions[0].type).toBe('emit');
   });
 });

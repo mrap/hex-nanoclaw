@@ -27,7 +27,7 @@ describe('EventStore', () => {
 
   it('marks events as processed', () => {
     const id = store.emit('test.event', {}, 'test');
-    store.markProcessed(id, ['policy-a']);
+    store.markProcessed(id);
 
     const events = store.getUnprocessed(10);
     expect(events).toHaveLength(0);

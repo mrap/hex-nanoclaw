@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { renderTemplate } from '../template.js';
+import { renderTemplate, renderTemplateShellSafe } from '../template.js';
+import { shellEscape } from '../shell-escape.js';
 
 describe('renderTemplate', () => {
   it('interpolates simple fields', () => {
@@ -36,5 +37,59 @@ describe('renderTemplate', () => {
     expect(renderTemplate('{{ a.b.c }}', { a: { b: { c: 'deep' } } })).toBe(
       'deep',
     );
+  });
+});
+
+describe('shellEscape', () => {
+  it('wraps value in single quotes', () => {
+    expect(shellEscape('hello')).toBe("'hello'");
+  });
+
+  it('escapes embedded single quotes', () => {
+    expect(shellEscape("it's")).toBe("'it'\\''s'");
+  });
+
+  it('handles empty string', () => {
+    expect(shellEscape('')).toBe("''");
+  });
+
+  it('escapes semicolons', () => {
+    expect(shellEscape('; rm -rf /')).toBe("'; rm -rf /'");
+  });
+
+  it('escapes backticks', () => {
+    expect(shellEscape('`whoami`')).toBe("'`whoami`'");
+  });
+
+  it('escapes $() subshell', () => {
+    expect(shellEscape('$(whoami)')).toBe("'$(whoami)'");
+  });
+
+  it('escapes pipe characters', () => {
+    expect(shellEscape('a | b')).toBe("'a | b'");
+  });
+});
+
+describe('renderTemplateShellSafe', () => {
+  it('escapes interpolated values for shell', () => {
+    const result = renderTemplateShellSafe('echo {{ name }}', { name: 'hello world' });
+    expect(result).toBe("echo 'hello world'");
+  });
+
+  it('escapes dangerous shell characters', () => {
+    const result = renderTemplateShellSafe('echo {{ val }}', { val: '; rm -rf /' });
+    expect(result).toBe("echo '; rm -rf /'");
+  });
+
+  it('returns empty single quotes for missing fields', () => {
+    const result = renderTemplateShellSafe('echo {{ missing }}', {});
+    expect(result).toBe("echo ''");
+  });
+
+  it('handles nested fields with shell escaping', () => {
+    const result = renderTemplateShellSafe('echo {{ event.name }}', {
+      event: { name: 'safe value' },
+    });
+    expect(result).toBe("echo 'safe value'");
   });
 });

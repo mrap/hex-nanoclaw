@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { evaluateConditions } from '../conditions.js';
 import { EventStore } from '../event-store.js';
-import type { FieldCondition, ShellCondition } from '../types.js';
+import type { FieldCondition } from '../types.js';
 
 let db: Database.Database;
 let store: EventStore;
@@ -70,6 +70,15 @@ describe('evaluateConditions', () => {
     ];
     const { passed } = evaluateConditions(conds, { id: 'q-123' }, store);
     expect(passed).toBe(true);
+  });
+
+  it('handles invalid regex gracefully', () => {
+    const conds: FieldCondition[] = [
+      { field: 'id', op: 'regex', value: '[invalid(' },
+    ];
+    const { passed, details } = evaluateConditions(conds, { id: 'anything' }, store);
+    expect(passed).toBe(false);
+    expect(details[0].passed).toBe(false);
   });
 
   it('resolves nested payload fields', () => {

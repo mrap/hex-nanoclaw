@@ -1,12 +1,12 @@
 import { spawnSync } from 'child_process';
 import type { ShellAction } from '../types.js';
-import { renderTemplate } from '../template.js';
+import { renderTemplateShellSafe } from '../template.js';
 
 export function executeShell(
   action: ShellAction,
   eventPayload: Record<string, unknown>,
 ): { status: 'success' | 'error'; output?: string; error?: string } {
-  const command = renderTemplate(action.command, { event: eventPayload });
+  const command = renderTemplateShellSafe(action.command, { event: eventPayload });
   const timeout = (action.timeout ?? 30) * 1000;
 
   try {

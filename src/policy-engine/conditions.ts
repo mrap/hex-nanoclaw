@@ -8,10 +8,10 @@ import type {
   ShellCondition,
 } from './types.js';
 import type { EventStore } from './event-store.js';
-import { renderTemplate } from './template.js';
+import { renderTemplateShellSafe, resolveFieldPath } from './template.js';
 import { parseDurationSeconds } from './duration.js';
 
-const COUNT_RE = /^count\(([^,]+),\s*(\d+[smhd]?)(?:,\s*(\w+)=([^)]+))?\)$/;
+const COUNT_RE = /^count\(([^,]+),\s*(\d+[smhd]?)\)$/;
 
 export function evaluateConditions(
   conditions: Condition[],
@@ -45,7 +45,6 @@ export function evaluateConditions(
     }
 
     if (!passed) {
-      // Short-circuit: mark remaining as not_evaluated
       for (let j = i + 1; j < conditions.length; j++) {
         const rem = conditions[j];
         if (rem.type === 'shell') {
@@ -73,20 +72,6 @@ export function evaluateConditions(
   return { passed: true, details };
 }
 
-function resolveField(
-  field: string,
-  payload: Record<string, unknown>,
-): unknown {
-  const parts = field.split('.');
-
-  let current: unknown = payload;
-  for (const part of parts) {
-    if (current == null || typeof current !== 'object') return undefined;
-    current = (current as Record<string, unknown>)[part];
-  }
-  return current;
-}
-
 function evaluateOne(
   cond: Condition,
   payload: Record<string, unknown>,
@@ -97,8 +82,6 @@ function evaluateOne(
   }
 
   const fieldCond = cond as FieldCondition;
-
-  // Check for count() function
   const countMatch = COUNT_RE.exec(fieldCond.field);
   let actual: unknown;
 
@@ -108,7 +91,7 @@ function evaluateOne(
     const seconds = parseDurationSeconds(durationStr);
     actual = store.countEvents(eventType, seconds);
   } else {
-    actual = resolveField(fieldCond.field, payload);
+    actual = resolveFieldPath(fieldCond.field, payload);
     if (actual === undefined) return { actual: undefined, passed: false };
   }
 
@@ -140,9 +123,15 @@ function evaluateOne(
     case 'glob':
       passed = minimatch(String(actual), String(expected));
       break;
-    case 'regex':
-      passed = new RegExp(String(expected)).test(String(actual));
+    case 'regex': {
+      try {
+        const re = new RegExp(String(expected));
+        passed = re.test(String(actual));
+      } catch {
+        passed = false;
+      }
       break;
+    }
     default:
       passed = false;
   }
@@ -156,7 +145,7 @@ function evaluateShellCondition(
 ): { actual: unknown; passed: boolean } {
   let command = cond.command;
   if (command.includes('{{')) {
-    command = renderTemplate(command, { event: payload });
+    command = renderTemplateShellSafe(command, { event: payload });
   }
 
   try {

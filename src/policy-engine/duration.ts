@@ -1,6 +1,7 @@
 /** Parse a duration string like "5m", "1h", "30s", "2d" into seconds. */
 export function parseDurationSeconds(s: string): number {
   const num = parseInt(s, 10);
+  if (isNaN(num)) return 0;
   if (s.endsWith('s')) return num;
   if (s.endsWith('m')) return num * 60;
   if (s.endsWith('h')) return num * 3600;
