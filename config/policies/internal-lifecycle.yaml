@@ -1,0 +1,11 @@
+name: internal-lifecycle
+description: "Log system lifecycle events (bootstrap policy)"
+lifecycle: persistent
+enabled: true
+rules:
+  - name: log-system-events
+    trigger:
+      event: "system.*"
+    actions:
+      - type: shell
+        command: "echo '[policy-engine] system event: {{ event.event_type }}' >> /tmp/nanoclaw-policy-engine.log"
