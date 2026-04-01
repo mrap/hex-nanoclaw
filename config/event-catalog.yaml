@@ -1,0 +1,123 @@
+# config/event-catalog.yaml
+# Single source of truth for event types in the NanoClaw system.
+# Mounted read-only into all containers. Agents reference this to know what to emit.
+
+events:
+  # --- System lifecycle ---
+  system.started:
+    description: "NanoClaw process started"
+    payload:
+      timestamp: "string"
+    emit_when: "Automatic on startup"
+
+  system.shutdown:
+    description: "NanoClaw process shutting down"
+    payload:
+      timestamp: "string"
+    emit_when: "Automatic on shutdown"
+
+  # --- Container lifecycle ---
+  container.started:
+    description: "A container agent started running"
+    payload:
+      group: "string"
+      task_id: "string or null"
+    emit_when: "Automatic when container starts"
+
+  container.exit:
+    description: "A container agent finished"
+    payload:
+      group: "string"
+      exit_code: "number"
+      duration_ms: "number"
+    emit_when: "Automatic when container exits"
+
+  # --- Task lifecycle ---
+  task.completed:
+    description: "An agent completed an assigned task"
+    payload:
+      group: "string"
+      task_id: "string"
+      result: "string or null"
+    emit_when: "After you have completed a task and want to signal the system"
+
+  task.failed:
+    description: "An agent failed to complete a task"
+    payload:
+      group: "string"
+      task_id: "string"
+      error: "string"
+    emit_when: "When a task fails and you want the system to know"
+
+  task.scheduled:
+    description: "A new task was scheduled by a policy action"
+    payload:
+      task_id: "string"
+      group: "string"
+      trigger_policy: "string"
+    emit_when: "When a schedule action creates a task"
+
+  # --- BOI integration ---
+  boi.spec.completed:
+    description: "A BOI spec finished execution"
+    payload:
+      spec_id: "string"
+      target_repo: "string"
+      status: "string"
+    emit_when: "Emitted by BOI completion hooks"
+
+  boi.spec.failed:
+    description: "A BOI spec failed"
+    payload:
+      spec_id: "string"
+      target_repo: "string"
+      error: "string"
+    emit_when: "Emitted by BOI failure hooks"
+
+  # --- Review ---
+  review.requested:
+    description: "Code review requested for output"
+    payload:
+      spec_id: "string"
+      repo: "string"
+    emit_when: "When you have produced output that should be reviewed"
+
+  review.complete:
+    description: "Code review finished"
+    payload:
+      spec_id: "string"
+      issues_found: "number"
+      summary: "string"
+    emit_when: "After completing a review task"
+
+  # --- Health ---
+  health.check:
+    description: "Periodic health check result"
+    payload:
+      component: "string"
+      status: "string"
+      detail: "string or null"
+    emit_when: "Emitted by health check policies"
+
+  health.alert:
+    description: "Health issue detected"
+    payload:
+      component: "string"
+      severity: "string"
+      message: "string"
+    emit_when: "When a health check detects a problem"
+
+  # --- Policy lifecycle ---
+  policy.created:
+    description: "A new policy was created (via LLM or manual)"
+    payload:
+      name: "string"
+      source: "string (user, llm, system)"
+    emit_when: "When a policy is added to the system"
+
+  policy.denied:
+    description: "A policy creation request was denied"
+    payload:
+      reason: "string"
+      source_group: "string"
+    emit_when: "When a policy request violates approval rules"

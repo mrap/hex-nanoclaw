@@ -210,6 +210,16 @@ function buildVolumeMounts(
     readonly: false,
   });
 
+  // Mount event catalog read-only into containers
+  const catalogPath = path.join(process.cwd(), 'config', 'event-catalog.yaml');
+  if (fs.existsSync(catalogPath)) {
+    mounts.push({
+      hostPath: catalogPath,
+      containerPath: '/workspace/event-catalog.yaml',
+      readonly: true,
+    });
+  }
+
   // Additional mounts validated against external allowlist (tamper-proof from containers)
   if (group.containerConfig?.additionalMounts) {
     const validatedMounts = validateAdditionalMounts(

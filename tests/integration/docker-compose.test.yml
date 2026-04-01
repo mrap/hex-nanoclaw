@@ -1,0 +1,10 @@
+services:
+  integration-tests:
+    build:
+      context: ../..
+      dockerfile: tests/integration/Dockerfile.test
+    environment:
+      - NODE_ENV=test
+      - NANOCLAW_DB=/tmp/test-events.db
+    tmpfs:
+      - /tmp

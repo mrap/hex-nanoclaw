@@ -1,0 +1,14 @@
+name: test-rate-limit
+description: "Only fires once per hour"
+lifecycle: persistent
+enabled: true
+rate_limit:
+  max_fires: 1
+  window: "1h"
+rules:
+  - name: limited-action
+    trigger:
+      event: "rate.test"
+    actions:
+      - type: emit
+        event: rate.fired

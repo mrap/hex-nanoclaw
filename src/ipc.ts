@@ -2,9 +2,10 @@ import { spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
+import Database from 'better-sqlite3';
 import { CronExpressionParser } from 'cron-parser';
 
-import { DATA_DIR, IPC_POLL_INTERVAL, TIMEZONE } from './config.js';
+import { DATA_DIR, IPC_POLL_INTERVAL, STORE_DIR, TIMEZONE } from './config.js';
 import { AvailableGroup } from './container-runner.js';
 import { createTask, deleteTask, getTaskById, updateTask } from './db.js';
 import { isValidGroupFolder } from './group-folder.js';
@@ -51,6 +52,11 @@ const SHELL_COMMAND_ALLOWLIST: AllowedCommand[] = [
     binary: 'python3',
     fixedArgs: [`${process.env.HOME}/.hex-events/hex_emit.py`],
     label: 'hex-emit',
+  },
+  {
+    binary: 'bash',
+    fixedArgs: [`${process.cwd()}/scripts/nanoclaw-emit.sh`],
+    label: 'nanoclaw-emit',
   },
 ];
 
@@ -248,6 +254,10 @@ export async function processTaskIpc(
     // For shell_command
     command?: string;
     timeout?: number;
+    // For emit_event
+    event_type?: string;
+    payload?: string | Record<string, unknown>;
+    source?: string;
   },
   sourceGroup: string, // Verified identity from IPC directory
   isMain: boolean, // Verified from directory path
@@ -574,6 +584,47 @@ export async function processTaskIpc(
         logger.error(
           { label: parsed.label, error: err.message },
           'shell_command failed',
+        );
+      }
+      break;
+    }
+
+    case 'emit_event': {
+      // Unprivileged: any group can emit events. This is just data.
+      const eventType = data.event_type;
+      const payload = data.payload || '{}';
+      const source = data.source || `container:${sourceGroup}`;
+
+      if (!eventType || typeof eventType !== 'string') {
+        logger.error(
+          { sourceGroup },
+          'emit_event: missing or invalid event_type',
+        );
+        break;
+      }
+
+      try {
+        // Direct SQLite INSERT into the events table
+        // The events table is created by the policy engine's EventStore
+        const dbPath = path.join(STORE_DIR, 'messages.db');
+        const insertDb = new Database(dbPath);
+        insertDb.pragma('journal_mode = WAL');
+        insertDb.pragma('busy_timeout = 5000');
+        insertDb
+          .prepare(
+            'INSERT INTO events (event_type, payload, source) VALUES (?, ?, ?)',
+          )
+          .run(
+            eventType,
+            typeof payload === 'string' ? payload : JSON.stringify(payload),
+            source,
+          );
+        insertDb.close();
+        logger.info({ eventType, sourceGroup }, 'Event emitted via IPC');
+      } catch (err: any) {
+        logger.error(
+          { eventType, sourceGroup, error: err.message },
+          'emit_event failed',
         );
       }
       break;

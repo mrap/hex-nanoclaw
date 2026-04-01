@@ -65,6 +65,14 @@ import { startSchedulerLoop } from './task-scheduler.js';
 import { Channel, NewMessage, RegisteredGroup } from './types.js';
 import { logger } from './logger.js';
 
+// Policy engine imports
+import Database from 'better-sqlite3';
+import { STORE_DIR } from './config.js';
+import { EventStore } from './policy-engine/event-store.js';
+import { PolicyLoader } from './policy-engine/policy-loader.js';
+import { PolicyEngine } from './policy-engine/engine.js';
+import { createTask } from './db.js';
+
 // Re-export for backwards compatibility during refactor
 export { escapeXml, formatMessages } from './router.js';
 
@@ -746,6 +754,72 @@ async function main(): Promise<void> {
       }
     },
   });
+  // --- Policy Engine ---
+  const policyDbPath = path.join(STORE_DIR, 'messages.db');
+  const policyDb = new Database(policyDbPath);
+  const eventStore = new EventStore(policyDb);
+  const policyDir = path.join(process.cwd(), 'config', 'policies');
+  const policyLoader = new PolicyLoader(policyDir, eventStore);
+  const policyEngine = new PolicyEngine(eventStore, {
+    sendMessage: async (jid, rawText) => {
+      const channel = findChannel(channels, jid);
+      if (!channel) {
+        logger.warn({ jid }, 'Policy engine: no channel for JID');
+        return;
+      }
+      const text = formatOutbound(rawText);
+      if (text) await channel.sendMessage(jid, text);
+    },
+    scheduleDeps: {
+      createTask: (task) =>
+        createTask(task as Parameters<typeof createTask>[0]),
+      findGroupJid: (folder) => {
+        const entry = Object.entries(registeredGroups).find(
+          ([_, g]) => g.folder === folder,
+        );
+        return entry?.[0];
+      },
+    },
+  });
+
+  const POLICY_POLL_INTERVAL = 2000;
+  const runPolicyEngine = async () => {
+    try {
+      const policies = policyLoader.loadAll();
+      await policyEngine.processOnce(policies);
+
+      // Process deferred events
+      policyEngine.processDeferredOnce();
+    } catch (err) {
+      logger.error({ err }, 'Policy engine error');
+    }
+    setTimeout(runPolicyEngine, POLICY_POLL_INTERVAL);
+  };
+
+  eventStore.emit(
+    'system.started',
+    { timestamp: new Date().toISOString() },
+    'system',
+  );
+  runPolicyEngine();
+  logger.info('Policy engine started (2s poll interval)');
+
+  // Add shutdown cleanup for policy engine DB
+  const originalShutdown = shutdown;
+  const shutdownWithPolicyEngine = async (signal: string) => {
+    eventStore.emit(
+      'system.shutdown',
+      { timestamp: new Date().toISOString() },
+      'system',
+    );
+    policyDb.close();
+    await originalShutdown(signal);
+  };
+  process.removeAllListeners('SIGTERM');
+  process.removeAllListeners('SIGINT');
+  process.on('SIGTERM', () => shutdownWithPolicyEngine('SIGTERM'));
+  process.on('SIGINT', () => shutdownWithPolicyEngine('SIGINT'));
+
   queue.setProcessMessagesFn(processGroupMessages);
   recoverPendingMessages();
   startMessageLoop().catch((err) => {

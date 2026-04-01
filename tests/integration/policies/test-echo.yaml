@@ -1,0 +1,11 @@
+name: test-echo
+description: "Fires a shell echo on test.event"
+lifecycle: persistent
+enabled: true
+rules:
+  - name: echo-on-test
+    trigger:
+      event: "test.event"
+    actions:
+      - type: shell
+        command: "echo 'policy-fired:{{ event.marker }}' >> /tmp/nanoclaw-test-actions.log"

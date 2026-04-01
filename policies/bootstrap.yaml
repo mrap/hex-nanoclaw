@@ -1,0 +1,16 @@
+# Bootstrap policy — logs all events for debugging.
+# Loaded automatically by the policy engine on startup.
+
+name: bootstrap-logger
+description: Log all events for debugging
+lifecycle: persistent
+enabled: true
+
+rules:
+  - name: log-all-events
+    trigger:
+      event: "*"
+    actions:
+      - type: shell
+        command: "echo '[policy-engine] {{ event.event_type }}' >> /tmp/nanoclaw-policy-engine.log"
+        # Note: /tmp is intentional — this is a disposable debug log. Replace with proper logging in production.

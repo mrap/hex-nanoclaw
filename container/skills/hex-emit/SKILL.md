@@ -1,28 +1,41 @@
 ---
 name: hex-emit
-description: Emit events to hex-events from inside a container
+description: Emit events to the NanoClaw policy engine from inside a container
 ---
 
 # Hex Emit
 
-Emit events to hex-events (the policy engine on the host) from inside a NanoClaw container.
+Emit events to NanoClaw's policy engine from inside a container.
 
-## Usage
+## How to Emit
 
-Write an IPC task file to trigger hex_emit.py on the host:
+Write a JSON file to your IPC tasks directory:
 
 ```bash
-cat > /workspace/ipc/tasks/emit-$(date +%s).json << 'EOF'
+cat > /workspace/ipc/tasks/emit-$(date +%s%N).json << 'EOF'
 {
-  "type": "shell_command",
-  "command": "python3 ~/.hex-events/hex_emit.py agent.action '{\"source\": \"nanoclaw\", \"detail\": \"your event data\"}'",
-  "timeout": 5
+  "type": "emit_event",
+  "event_type": "task.completed",
+  "payload": {"group": "my-group", "result": "done"},
+  "source": "my-agent"
 }
 EOF
 ```
 
-The IPC watcher executes allowlisted commands within 1 second.
+The IPC watcher picks up the file within 1 second and inserts the event into the policy engine's event store.
 
-## Security
+## Available Event Types
 
-Only `python3 ~/.hex-events/hex_emit.py` is in the command allowlist. Arbitrary commands are blocked.
+See `/workspace/event-catalog.yaml` for the full list of known events.
+
+Common events you might emit:
+- `task.completed` — You finished an assigned task
+- `task.failed` — A task failed
+- `review.complete` — You finished reviewing code
+- `health.alert` — You detected a problem
+
+## Payload Guidelines
+
+- Always include the `group` field (your group folder name)
+- Match the types documented in the event catalog
+- Keep payloads small (under 1KB)
