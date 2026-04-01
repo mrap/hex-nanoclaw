@@ -47,20 +47,36 @@ export function createTestContext(policyDir: string): TestContext {
   return { db, dbPath, store, loader, engine, cleanup };
 }
 
-export function getEvents(db: Database.Database): Array<Record<string, unknown>> {
-  return db.prepare('SELECT * FROM events ORDER BY id').all() as Array<Record<string, unknown>>;
+export function getEvents(
+  db: Database.Database,
+): Array<Record<string, unknown>> {
+  return db.prepare('SELECT * FROM events ORDER BY id').all() as Array<
+    Record<string, unknown>
+  >;
 }
 
-export function getActionLogs(db: Database.Database): Array<Record<string, unknown>> {
-  return db.prepare('SELECT * FROM action_log ORDER BY id').all() as Array<Record<string, unknown>>;
+export function getActionLogs(
+  db: Database.Database,
+): Array<Record<string, unknown>> {
+  return db.prepare('SELECT * FROM action_log ORDER BY id').all() as Array<
+    Record<string, unknown>
+  >;
 }
 
-export function getEvalLogs(db: Database.Database): Array<Record<string, unknown>> {
-  return db.prepare('SELECT * FROM policy_eval_log ORDER BY id').all() as Array<Record<string, unknown>>;
+export function getEvalLogs(
+  db: Database.Database,
+): Array<Record<string, unknown>> {
+  return db.prepare('SELECT * FROM policy_eval_log ORDER BY id').all() as Array<
+    Record<string, unknown>
+  >;
 }
 
-export function getPolicies(db: Database.Database): Array<Record<string, unknown>> {
-  return db.prepare('SELECT * FROM policies ORDER BY id').all() as Array<Record<string, unknown>>;
+export function getPolicies(
+  db: Database.Database,
+): Array<Record<string, unknown>> {
+  return db.prepare('SELECT * FROM policies ORDER BY id').all() as Array<
+    Record<string, unknown>
+  >;
 }
 
 let passCount = 0;
@@ -84,18 +100,26 @@ export function assertEq<T>(actual: T, expected: T, message: string): void {
     console.log(`  PASS: ${message}`);
   } else {
     failCount++;
-    console.error(`  FAIL: ${message} — expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
+    console.error(
+      `  FAIL: ${message} — expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`,
+    );
     process.exitCode = 1;
   }
 }
 
-export function assertGte(actual: number, expected: number, message: string): void {
+export function assertGte(
+  actual: number,
+  expected: number,
+  message: string,
+): void {
   if (actual >= expected) {
     passCount++;
     console.log(`  PASS: ${message}`);
   } else {
     failCount++;
-    console.error(`  FAIL: ${message} — expected >= ${expected}, got ${actual}`);
+    console.error(
+      `  FAIL: ${message} — expected >= ${expected}, got ${actual}`,
+    );
     process.exitCode = 1;
   }
 }

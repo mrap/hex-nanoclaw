@@ -45,7 +45,9 @@ async function testFileBasedIpcSimulation(): Promise<void> {
     insertDb.pragma('journal_mode = WAL');
     insertDb.pragma('busy_timeout = 5000');
     insertDb
-      .prepare('INSERT INTO events (event_type, payload, source) VALUES (?, ?, ?)')
+      .prepare(
+        'INSERT INTO events (event_type, payload, source) VALUES (?, ?, ?)',
+      )
       .run(
         eventType,
         typeof payload === 'string' ? payload : JSON.stringify(payload),
@@ -77,10 +79,7 @@ async function testFileBasedIpcSimulation(): Promise<void> {
       'container:main',
       'source stored correctly',
     );
-    assert(
-      !fs.existsSync(ipcFile),
-      'IPC file deleted after processing',
-    );
+    assert(!fs.existsSync(ipcFile), 'IPC file deleted after processing');
 
     db.close();
   } finally {
@@ -119,7 +118,9 @@ async function testNonMainGroupCanEmit(): Promise<void> {
     insertDb.pragma('journal_mode = WAL');
     insertDb.pragma('busy_timeout = 5000');
     insertDb
-      .prepare('INSERT INTO events (event_type, payload, source) VALUES (?, ?, ?)')
+      .prepare(
+        'INSERT INTO events (event_type, payload, source) VALUES (?, ?, ?)',
+      )
       .run(
         eventType,
         typeof payload === 'string' ? payload : JSON.stringify(payload),
@@ -186,7 +187,8 @@ async function testIpcJsonFormatValidation(): Promise<void> {
     'payload is an object',
   );
   assert(
-    typeof ipcJson.source === 'string' && ipcJson.source.startsWith('container:'),
+    typeof ipcJson.source === 'string' &&
+      ipcJson.source.startsWith('container:'),
     'source starts with container:',
   );
 
@@ -194,7 +196,11 @@ async function testIpcJsonFormatValidation(): Promise<void> {
   const serialized = JSON.stringify(ipcJson);
   const parsed = JSON.parse(serialized) as typeof ipcJson;
   assertEq(parsed.type, ipcJson.type, 'type survives JSON round-trip');
-  assertEq(parsed.event_type, ipcJson.event_type, 'event_type survives JSON round-trip');
+  assertEq(
+    parsed.event_type,
+    ipcJson.event_type,
+    'event_type survives JSON round-trip',
+  );
   assertEq(
     JSON.stringify(parsed.payload),
     JSON.stringify(ipcJson.payload),

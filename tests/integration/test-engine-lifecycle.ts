@@ -30,7 +30,11 @@ async function testBasicEventProcessing(): Promise<void> {
     const actions = getActionLogs(ctx.db);
     const echoAction = actions.find((a) => a.policy_name === 'test-echo');
     assert(echoAction !== undefined, 'action_log has test-echo entry');
-    assertEq(echoAction!.action_type as string, 'shell', 'action type is shell');
+    assertEq(
+      echoAction!.action_type as string,
+      'shell',
+      'action type is shell',
+    );
     assertEq(echoAction!.status as string, 'success', 'shell action succeeded');
 
     const evals = getEvalLogs(ctx.db);
@@ -149,7 +153,12 @@ async function testDeferredEvents(): Promise<void> {
   try {
     // Add a deferred event with a past fire_at time
     const pastTime = new Date(Date.now() - 5000).toISOString();
-    ctx.store.addDeferred('deferred.test', { source: 'deferred' }, 'test', pastTime);
+    ctx.store.addDeferred(
+      'deferred.test',
+      { source: 'deferred' },
+      'test',
+      pastTime,
+    );
 
     // Process deferred events
     ctx.engine.processDeferredOnce();
@@ -157,9 +166,12 @@ async function testDeferredEvents(): Promise<void> {
     // The deferred event should now be in the events table
     const events = getEvents(ctx.db);
     const deferredEvent = events.find((e) => e.event_type === 'deferred.test');
-    assert(deferredEvent !== undefined, 'deferred event promoted to events table');
+    assert(
+      deferredEvent !== undefined,
+      'deferred event promoted to events table',
+    );
     assertEq(
-      (deferredEvent!.payload as string),
+      deferredEvent!.payload as string,
       JSON.stringify({ source: 'deferred' }),
       'deferred event payload preserved',
     );
