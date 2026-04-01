@@ -25,7 +25,8 @@ set -euo pipefail
 command -v sqlite3 >/dev/null 2>&1 || { echo "[nanoclaw-emit] ERROR: sqlite3 not found on PATH" >&2; exit 1; }
 
 EVENT_TYPE="${1:?Usage: nanoclaw-emit <event_type> [payload_json] [source]}"
-PAYLOAD="${2:-{}}"
+_DEFAULT_PAYLOAD='{}'
+PAYLOAD="${2:-$_DEFAULT_PAYLOAD}"
 SOURCE="${3:-unknown}"
 
 # Find the DB. Check env var first, then default location.
@@ -37,9 +38,13 @@ if [ ! -f "$NANOCLAW_DB" ]; then
 fi
 
 # Escape single quotes for safe SQLite interpolation.
-ESC_TYPE="${EVENT_TYPE//\'/\'\'}"
-ESC_PAYLOAD="${PAYLOAD//\'/\'\'}"
-ESC_SOURCE="${SOURCE//\'/\'\'}"
+# Note: bash replacement strings pass backslashes literally, so we use
+# variable-based replacement to produce '' (two single quotes) as SQLite expects.
+_SQ="'"
+_SQ2="''"
+ESC_TYPE="${EVENT_TYPE//$_SQ/$_SQ2}"
+ESC_PAYLOAD="${PAYLOAD//$_SQ/$_SQ2}"
+ESC_SOURCE="${SOURCE//$_SQ/$_SQ2}"
 
 if ! sqlite3 "$NANOCLAW_DB" <<SQL
 .timeout 5000
