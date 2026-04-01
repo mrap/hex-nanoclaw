@@ -3,6 +3,8 @@
     "main": {
       "name": "hex",
       "folder": "main",
+      "channels": { "slack": "hex-main" },
+      "isMain": true,
       "mcpServers": {
         "playwright": { "command": "npx", "args": ["-y", "@playwright/mcp"] },
         "github": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"] },
@@ -18,6 +20,7 @@
     "ops": {
       "name": "ops",
       "folder": "ops",
+      "channels": { "slack": "hex-ops" },
       "mcpServers": {
         "memory": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"] },
         "sequential-thinking": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"] }
@@ -30,12 +33,14 @@
     "gws": {
       "name": "gws",
       "folder": "gws",
+      "channels": { "slack": "hex-gws" },
       "mcpServers": {},
       "additionalMounts": []
     },
     "boi": {
       "name": "boi",
       "folder": "boi",
+      "channels": { "slack": "hex-boi" },
       "mcpServers": {
         "memory": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"] },
         "github": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"] }

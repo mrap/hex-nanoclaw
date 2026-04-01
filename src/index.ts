@@ -63,6 +63,7 @@ import {
 } from './sender-allowlist.js';
 import { startSchedulerLoop } from './task-scheduler.js';
 import { Channel, NewMessage, RegisteredGroup } from './types.js';
+import { autoRegisterGroups, loadGroupsConfig } from './group-auto-register.js';
 import { logger } from './logger.js';
 
 // Policy engine imports
@@ -700,6 +701,22 @@ async function main(): Promise<void> {
   if (channels.length === 0) {
     logger.fatal('No channels connected');
     process.exit(1);
+  }
+
+  // Auto-register groups from config/groups.json
+  const groupsConfig = loadGroupsConfig(path.join(process.cwd(), 'config'));
+  if (groupsConfig) {
+    const channelType = getRegisteredChannelNames()[0] || 'slack';
+    const count = autoRegisterGroups(
+      groupsConfig,
+      channelType,
+      getAllChats(),
+      new Set(Object.keys(registeredGroups)),
+      registerGroup,
+    );
+    if (count > 0) {
+      logger.info({ count }, 'Auto-registered groups from config');
+    }
   }
 
   // Start subsystems (independently of connection handler)
