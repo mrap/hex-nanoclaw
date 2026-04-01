@@ -5,11 +5,19 @@ import path from 'path';
 import Database from 'better-sqlite3';
 import { CronExpressionParser } from 'cron-parser';
 
-import { DATA_DIR, IPC_POLL_INTERVAL, STORE_DIR, TIMEZONE } from './config.js';
+import {
+  DATA_DIR,
+  GROUPS_DIR,
+  IPC_POLL_INTERVAL,
+  STORE_DIR,
+  TIMEZONE,
+} from './config.js';
 import { AvailableGroup } from './container-runner.js';
 import { createTask, deleteTask, getTaskById, updateTask } from './db.js';
 import { isValidGroupFolder } from './group-folder.js';
+import { handleSkillCreate, handleSkillPatch } from './ipc-skill-handler.js';
 import { logger } from './logger.js';
+import { handleMemoryUpdate } from './memory-handler.js';
 import { RegisteredGroup } from './types.js';
 
 export interface IpcDeps {
@@ -258,6 +266,17 @@ export async function processTaskIpc(
     event_type?: string;
     payload?: string | Record<string, unknown>;
     source?: string;
+    // For skill_create / skill_patch
+    content?: string;
+    find?: string;
+    replace?: string;
+    // For memory_update
+    store?: string;
+    action?: string;
+    match?: string;
+    // For skill_promote
+    skill_name?: string;
+    from_group?: string;
   },
   sourceGroup: string, // Verified identity from IPC directory
   isMain: boolean, // Verified from directory path
@@ -627,6 +646,177 @@ export async function processTaskIpc(
           'emit_event failed',
         );
       }
+      break;
+    }
+
+    case 'skill_create': {
+      if (!data.name || !data.content) {
+        logger.warn({ sourceGroup }, 'skill_create: missing name or content');
+        break;
+      }
+      const sessionsDir = path.join(DATA_DIR, 'sessions');
+      const createResult = await handleSkillCreate(
+        { name: data.name, content: data.content },
+        sourceGroup,
+        sessionsDir,
+      );
+      if (createResult.success) {
+        await processTaskIpc(
+          {
+            type: 'emit_event',
+            event_type: 'agent.skill.created',
+            payload: JSON.stringify({
+              skill_name: data.name,
+              group: sourceGroup,
+            }),
+            source: `container:${sourceGroup}`,
+          },
+          sourceGroup,
+          isMain,
+          deps,
+        );
+      }
+      logger.info(
+        { name: data.name, sourceGroup, success: createResult.success },
+        'skill_create processed',
+      );
+      break;
+    }
+
+    case 'skill_patch': {
+      if (!data.name || !data.find || !data.replace) {
+        logger.warn(
+          { sourceGroup },
+          'skill_patch: missing name, find, or replace',
+        );
+        break;
+      }
+      const patchSessionsDir = path.join(DATA_DIR, 'sessions');
+      const patchResult = handleSkillPatch(
+        {
+          name: data.name,
+          find: data.find,
+          replace: data.replace,
+        },
+        sourceGroup,
+        patchSessionsDir,
+      );
+      if (patchResult.success) {
+        await processTaskIpc(
+          {
+            type: 'emit_event',
+            event_type: 'agent.skill.patched',
+            payload: JSON.stringify({
+              skill_name: data.name,
+              group: sourceGroup,
+            }),
+            source: `container:${sourceGroup}`,
+          },
+          sourceGroup,
+          isMain,
+          deps,
+        );
+      }
+      logger.info(
+        { name: data.name, sourceGroup, success: patchResult.success },
+        'skill_patch processed',
+      );
+      break;
+    }
+
+    case 'memory_update': {
+      if (!data.store || !data.action || !data.content) {
+        logger.warn(
+          { sourceGroup },
+          'memory_update: missing store, action, or content',
+        );
+        break;
+      }
+      const groupDir = path.join(GROUPS_DIR, sourceGroup);
+      const memResult = handleMemoryUpdate(
+        {
+          store: data.store,
+          action: data.action,
+          content: data.content,
+          match: data.match,
+        },
+        groupDir,
+      );
+      logger.info(
+        {
+          store: data.store,
+          action: data.action,
+          sourceGroup,
+          success: memResult.success,
+        },
+        'memory_update processed',
+      );
+      break;
+    }
+
+    case 'skill_promote': {
+      // Authorization: only main group or ops group can promote
+      if (!isMain && sourceGroup !== 'ops') {
+        logger.warn({ sourceGroup }, 'skill_promote: unauthorized');
+        break;
+      }
+      if (!data.skill_name || !data.from_group) {
+        logger.warn(
+          { sourceGroup },
+          'skill_promote: missing skill_name or from_group',
+        );
+        break;
+      }
+      const promoteSessionsDir = path.join(DATA_DIR, 'sessions');
+      const sourceSkillPath = path.join(
+        promoteSessionsDir,
+        data.from_group,
+        'skills',
+        data.skill_name,
+        'SKILL.md',
+      );
+      if (!fs.existsSync(sourceSkillPath)) {
+        logger.warn(
+          { skill: data.skill_name, from: data.from_group },
+          'skill_promote: source skill not found',
+        );
+        break;
+      }
+      const skillContent = fs.readFileSync(sourceSkillPath, 'utf-8');
+      const allGroups = Object.values(registeredGroups);
+      let promoted = 0;
+      for (const group of allGroups) {
+        if (group.folder === data.from_group) continue;
+        const targetPath = path.join(
+          promoteSessionsDir,
+          group.folder,
+          'skills',
+          data.skill_name,
+          'SKILL.md',
+        );
+        fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+        fs.writeFileSync(targetPath, skillContent, 'utf-8');
+        promoted++;
+      }
+      await processTaskIpc(
+        {
+          type: 'emit_event',
+          event_type: 'ops.skill.promoted',
+          payload: JSON.stringify({
+            skill_name: data.skill_name,
+            from_group: data.from_group,
+            promoted_to: promoted,
+          }),
+          source: `container:${sourceGroup}`,
+        },
+        sourceGroup,
+        isMain,
+        deps,
+      );
+      logger.info(
+        { skill: data.skill_name, from: data.from_group, promoted },
+        'skill_promote completed',
+      );
       break;
     }
 
