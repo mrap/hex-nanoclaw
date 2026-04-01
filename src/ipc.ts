@@ -39,24 +39,17 @@ interface AllowedCommand {
 const SHELL_COMMAND_ALLOWLIST: AllowedCommand[] = [
   {
     binary: 'python3',
-    fixedArgs: [
-      `${process.env.HOME}/.boi/lib/coordination.py`,
-    ],
+    fixedArgs: [`${process.env.HOME}/.boi/lib/coordination.py`],
     label: 'coordination',
   },
   {
     binary: 'bash',
-    fixedArgs: [
-      `${process.env.HOME}/.boi/boi`,
-      'dispatch',
-    ],
+    fixedArgs: [`${process.env.HOME}/.boi/boi`, 'dispatch'],
     label: 'boi-dispatch',
   },
   {
     binary: 'python3',
-    fixedArgs: [
-      `${process.env.HOME}/.hex-events/hex_emit.py`,
-    ],
+    fixedArgs: [`${process.env.HOME}/.hex-events/hex_emit.py`],
     label: 'hex-emit',
   },
 ];
@@ -548,10 +541,7 @@ export async function processTaskIpc(
       // hex-specific: Execute allowlisted host commands from container IPC.
       // SECURITY: Only main group can execute. Uses spawnSync (no shell).
       if (!isMain) {
-        logger.warn(
-          { sourceGroup },
-          'shell_command BLOCKED: non-main group',
-        );
+        logger.warn({ sourceGroup }, 'shell_command BLOCKED: non-main group');
         break;
       }
       const command = data.command;
@@ -579,10 +569,7 @@ export async function processTaskIpc(
           stdio: ['pipe', 'pipe', 'pipe'],
           shell: false,
         });
-        logger.info(
-          { label: parsed.label },
-          'shell_command executed',
-        );
+        logger.info({ label: parsed.label }, 'shell_command executed');
       } catch (err: any) {
         logger.error(
           { label: parsed.label, error: err.message },
