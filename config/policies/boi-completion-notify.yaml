@@ -1,0 +1,26 @@
+name: boi-completion-notify
+description: "Emit result events when BOI spec completes or fails"
+lifecycle: persistent
+enabled: true
+rules:
+  - name: notify-on-completion
+    trigger:
+      event: "boi.spec.completed"
+    actions:
+      - type: emit
+        event: boi.result.ready
+        payload:
+          spec_id: "{{ event.spec_id }}"
+          target_repo: "{{ event.target_repo }}"
+          summary: "{{ event.summary }}"
+          source_group: "{{ event.source }}"
+  - name: notify-on-failure
+    trigger:
+      event: "boi.spec.failed"
+    actions:
+      - type: emit
+        event: boi.result.ready
+        payload:
+          spec_id: "{{ event.spec_id }}"
+          error: "{{ event.error }}"
+          source_group: "{{ event.source }}"

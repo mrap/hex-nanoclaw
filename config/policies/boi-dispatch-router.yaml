@@ -1,0 +1,14 @@
+name: boi-dispatch-router
+description: "Route boi.dispatch events to the BOI group for execution"
+lifecycle: persistent
+enabled: true
+rules:
+  - name: route-to-boi
+    trigger:
+      event: "boi.dispatch"
+    actions:
+      - type: schedule
+        group: boi
+        prompt: "Execute BOI spec: {{ event.spec_path }}. Spec ID: {{ event.spec_id }}. Dispatched by: {{ event.source }}."
+        schedule_type: once
+        schedule_value: "now"
