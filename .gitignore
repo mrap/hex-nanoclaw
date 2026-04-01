@@ -13,10 +13,19 @@ logs/
 groups/*
 !groups/main/
 !groups/global/
+!groups/ops/
+!groups/gws/
+!groups/boi/
 groups/main/*
 groups/global/*
+groups/ops/*
+groups/gws/*
+groups/boi/*
 !groups/main/CLAUDE.md
 !groups/global/CLAUDE.md
+!groups/ops/CLAUDE.md
+!groups/gws/CLAUDE.md
+!groups/boi/CLAUDE.md
 groups/*/conversations/
 
 # Secrets
