@@ -43,10 +43,17 @@ function getLimit(store: string): number {
   return store === 'user' ? USER_LIMIT : MEMORY_LIMIT;
 }
 
+const VALID_STORES = new Set(["memory", "user"]);
+
 export function handleMemoryUpdate(
   data: { store: string; action: string; content: string; match?: string },
   groupDir: string,
 ): MemoryUpdateResult {
+  // Validate store to prevent path traversal
+  if (!VALID_STORES.has(data.store)) {
+    return { success: false, error: `Invalid store: "${data.store}". Must be "memory" or "user"` };
+  }
+
   const memPath = getMemoryPath(groupDir, data.store);
   const limit = getLimit(data.store);
 

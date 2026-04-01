@@ -29,10 +29,7 @@ function loadPolicy(file: string): PolicyYaml {
 }
 
 function readGroupClaudeMd(name: string): string {
-  return fs.readFileSync(
-    path.join(ROOT, 'groups', name, 'CLAUDE.md'),
-    'utf-8',
-  );
+  return fs.readFileSync(path.join(ROOT, 'groups', name, 'CLAUDE.md'), 'utf-8');
 }
 
 // ─── 1. Config Structure Validation ────────────────────────────────────────
@@ -128,9 +125,7 @@ describe('Mount Allowlist Validation', () => {
   });
 
   it('contains expected root paths', () => {
-    const paths = allowlist.allowedRoots.map(
-      (r: { path: string }) => r.path,
-    );
+    const paths = allowlist.allowedRoots.map((r: { path: string }) => r.path);
     expect(paths).toContain('~/mrap-hex');
     expect(paths).toContain('~/mrap-hex/.claude/skills');
     expect(paths).toContain('~/mrap-hex/.claude/scripts');
@@ -164,9 +159,7 @@ describe('CLAUDE.md Templates', () => {
   });
 
   it('ops contains "Autonomous System Operations"', () => {
-    expect(readGroupClaudeMd('ops')).toContain(
-      'Autonomous System Operations',
-    );
+    expect(readGroupClaudeMd('ops')).toContain('Autonomous System Operations');
   });
 
   it('gws contains "Google Workspace Agent"', () => {
@@ -202,9 +195,7 @@ describe('Policy YAML Structure', () => {
       expect(policy, `${file}`).toHaveProperty('lifecycle');
       expect(policy, `${file}`).toHaveProperty('enabled');
       expect(policy, `${file}`).toHaveProperty('rules');
-      expect(Array.isArray(policy.rules), `${file} rules is array`).toBe(
-        true,
-      );
+      expect(Array.isArray(policy.rules), `${file} rules is array`).toBe(true);
     }
   });
 

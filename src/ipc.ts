@@ -15,7 +15,7 @@ import {
 import { AvailableGroup } from './container-runner.js';
 import { createTask, deleteTask, getTaskById, updateTask } from './db.js';
 import { isValidGroupFolder } from './group-folder.js';
-import { handleSkillCreate, handleSkillPatch } from './ipc-skill-handler.js';
+import { handleSkillCreate, handleSkillPatch, NAME_PATTERN } from './ipc-skill-handler.js';
 import { logger } from './logger.js';
 import { handleMemoryUpdate } from './memory-handler.js';
 import { RegisteredGroup } from './types.js';
@@ -765,6 +765,16 @@ export async function processTaskIpc(
           { sourceGroup },
           'skill_promote: missing skill_name or from_group',
         );
+        break;
+      }
+      // Validate inputs to prevent path traversal
+      const GROUP_FOLDER_PATTERN = /^[a-zA-Z0-9_-]+$/;
+      if (!NAME_PATTERN.test(data.skill_name)) {
+        logger.warn({ skill: data.skill_name }, "skill_promote: invalid skill_name");
+        break;
+      }
+      if (!GROUP_FOLDER_PATTERN.test(data.from_group)) {
+        logger.warn({ from: data.from_group }, "skill_promote: invalid from_group");
         break;
       }
       const promoteSessionsDir = path.join(DATA_DIR, 'sessions');

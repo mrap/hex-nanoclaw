@@ -34,9 +34,7 @@ const onecli = new OneCLI({ url: ONECLI_URL });
  * Load per-group MCP server configuration from config/groups.json.
  * Returns an empty object if no config exists for the group.
  */
-function getGroupMcpConfig(
-  groupFolder: string,
-): Record<string, unknown> {
+function getGroupMcpConfig(groupFolder: string): Record<string, unknown> {
   try {
     const configPath = path.join(process.cwd(), 'config', 'groups.json');
     if (!fs.existsSync(configPath)) return {};
