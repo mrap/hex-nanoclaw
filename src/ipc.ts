@@ -15,10 +15,7 @@ import {
 import { AvailableGroup } from './container-runner.js';
 import { createTask, deleteTask, getTaskById, updateTask } from './db.js';
 import { isValidGroupFolder } from './group-folder.js';
-import {
-  handleSkillCreate,
-  handleSkillPatch,
-} from './ipc-skill-handler.js';
+import { handleSkillCreate, handleSkillPatch } from './ipc-skill-handler.js';
 import { NAME_PATTERN } from './skill-scanner.js';
 import { logger } from './logger.js';
 import { handleMemoryUpdate } from './memory-handler.js';
