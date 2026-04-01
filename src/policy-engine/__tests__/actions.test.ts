@@ -5,7 +5,12 @@ import { executeEmit } from '../actions/emit.js';
 import { executeShell } from '../actions/shell.js';
 import { executeSchedule } from '../actions/schedule.js';
 import { executeMessage } from '../actions/message.js';
-import type { EmitAction, ShellAction, ScheduleAction, MessageAction } from '../types.js';
+import type {
+  EmitAction,
+  ShellAction,
+  ScheduleAction,
+  MessageAction,
+} from '../types.js';
 
 let db: Database.Database;
 let store: EventStore;
@@ -77,26 +82,39 @@ describe('shell action', () => {
   });
 
   it('interpolates templates in command with shell escaping', () => {
-    const action: ShellAction = { type: 'shell', command: 'echo {{ event.name }}' };
+    const action: ShellAction = {
+      type: 'shell',
+      command: 'echo {{ event.name }}',
+    };
     const result = executeShell(action, { name: 'world' });
     expect(result.output).toContain('world');
   });
 
   it('respects timeout', () => {
-    const action: ShellAction = { type: 'shell', command: 'sleep 10', timeout: 1 };
+    const action: ShellAction = {
+      type: 'shell',
+      command: 'sleep 10',
+      timeout: 1,
+    };
     const result = executeShell(action, {});
     expect(result.status).toBe('error');
   });
 
   it('escapes values with single quotes', () => {
-    const action: ShellAction = { type: 'shell', command: 'echo {{ event.val }}' };
+    const action: ShellAction = {
+      type: 'shell',
+      command: 'echo {{ event.val }}',
+    };
     const result = executeShell(action, { val: "it's" });
     expect(result.status).toBe('success');
     expect(result.output).toContain("it's");
   });
 
   it('prevents command injection via semicolons', () => {
-    const action: ShellAction = { type: 'shell', command: 'echo {{ event.val }}' };
+    const action: ShellAction = {
+      type: 'shell',
+      command: 'echo {{ event.val }}',
+    };
     const result = executeShell(action, { val: 'safe; echo INJECTED' });
     expect(result.status).toBe('success');
     expect(result.output).not.toContain('INJECTED\n');
@@ -104,21 +122,30 @@ describe('shell action', () => {
   });
 
   it('prevents command injection via backticks', () => {
-    const action: ShellAction = { type: 'shell', command: 'echo {{ event.val }}' };
+    const action: ShellAction = {
+      type: 'shell',
+      command: 'echo {{ event.val }}',
+    };
     const result = executeShell(action, { val: '`echo INJECTED`' });
     expect(result.status).toBe('success');
     expect(result.output).not.toBe('INJECTED');
   });
 
   it('prevents command injection via $() subshell', () => {
-    const action: ShellAction = { type: 'shell', command: 'echo {{ event.val }}' };
+    const action: ShellAction = {
+      type: 'shell',
+      command: 'echo {{ event.val }}',
+    };
     const result = executeShell(action, { val: '$(echo INJECTED)' });
     expect(result.status).toBe('success');
     expect(result.output).not.toBe('INJECTED');
   });
 
   it('prevents command injection via pipes', () => {
-    const action: ShellAction = { type: 'shell', command: 'echo {{ event.val }}' };
+    const action: ShellAction = {
+      type: 'shell',
+      command: 'echo {{ event.val }}',
+    };
     const result = executeShell(action, { val: 'safe | cat /etc/passwd' });
     expect(result.status).toBe('success');
     expect(result.output).toContain('safe | cat /etc/passwd');
@@ -129,8 +156,11 @@ describe('schedule action', () => {
   it('creates a scheduled task', () => {
     let createdTask: Record<string, unknown> | null = null;
     const deps = {
-      createTask: (task: Record<string, unknown>) => { createdTask = task; },
-      findGroupJid: (group: string) => group === 'test-group' ? 'jid@test' : undefined,
+      createTask: (task: Record<string, unknown>) => {
+        createdTask = task;
+      },
+      findGroupJid: (group: string) =>
+        group === 'test-group' ? 'jid@test' : undefined,
     };
 
     const action: ScheduleAction = {
@@ -180,7 +210,11 @@ describe('message action', () => {
       },
     };
 
-    const action: MessageAction = { type: 'message', jid: 'user@jid', text: 'hello world' };
+    const action: MessageAction = {
+      type: 'message',
+      jid: 'user@jid',
+      text: 'hello world',
+    };
     const result = await executeMessage(action, {}, deps);
     expect(result.status).toBe('success');
     expect(sentJid).toBe('user@jid');
@@ -190,10 +224,16 @@ describe('message action', () => {
   it('interpolates templates in text', async () => {
     let sentText = '';
     const deps = {
-      sendMessage: async (_jid: string, text: string) => { sentText = text; },
+      sendMessage: async (_jid: string, text: string) => {
+        sentText = text;
+      },
     };
 
-    const action: MessageAction = { type: 'message', jid: 'user@jid', text: 'Spec {{ event.spec_id }} completed' };
+    const action: MessageAction = {
+      type: 'message',
+      jid: 'user@jid',
+      text: 'Spec {{ event.spec_id }} completed',
+    };
     const result = await executeMessage(action, { spec_id: 'q-100' }, deps);
     expect(result.status).toBe('success');
     expect(sentText).toBe('Spec q-100 completed');
@@ -201,10 +241,16 @@ describe('message action', () => {
 
   it('returns error on failure', async () => {
     const deps = {
-      sendMessage: async () => { throw new Error('network error'); },
+      sendMessage: async () => {
+        throw new Error('network error');
+      },
     };
 
-    const action: MessageAction = { type: 'message', jid: 'user@jid', text: 'hello' };
+    const action: MessageAction = {
+      type: 'message',
+      jid: 'user@jid',
+      text: 'hello',
+    };
     const result = await executeMessage(action, {}, deps);
     expect(result.status).toBe('error');
     expect(result.error).toContain('network error');

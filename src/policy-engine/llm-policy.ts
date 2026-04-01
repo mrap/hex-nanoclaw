@@ -1,6 +1,7 @@
 import yaml from 'js-yaml';
 import type { ConditionOp, PolicyLifecycle } from './types.js';
 
+// These must stay in sync with the Action union type in types.ts
 const VALID_ACTION_TYPES = ['emit', 'shell', 'schedule', 'message'] as const;
 const VALID_CONDITION_OPS: ConditionOp[] = [
   'eq',
@@ -67,6 +68,11 @@ export function validatePolicyYaml(yamlContent: string): string[] {
     const rule = policy.rules[i] as Record<string, unknown>;
     const prefix = `rules[${i}]`;
 
+    // rule name
+    if (!rule.name || typeof rule.name !== 'string') {
+      errors.push(`${prefix}: rule must have a "name" field (string)`);
+    }
+
     // trigger
     if (!rule.trigger || typeof rule.trigger !== 'object') {
       errors.push(`${prefix}: must have a "trigger" object`);
@@ -92,6 +98,43 @@ export function validatePolicyYaml(yamlContent: string): string[] {
           errors.push(
             `${prefix}.actions[${j}]: invalid type "${String(action.type)}". Valid: ${VALID_ACTION_TYPES.join(', ')}`,
           );
+          continue;
+        }
+
+        // Validate required fields per action type
+        switch (action.type) {
+          case 'emit':
+            if (!action.event)
+              errors.push(
+                `${prefix}.actions[${j}]: emit action requires "event" field`,
+              );
+            break;
+          case 'shell':
+            if (!action.command)
+              errors.push(
+                `${prefix}.actions[${j}]: shell action requires "command" field`,
+              );
+            break;
+          case 'schedule':
+            if (!action.group)
+              errors.push(
+                `${prefix}.actions[${j}]: schedule action requires "group" field`,
+              );
+            if (!action.prompt)
+              errors.push(
+                `${prefix}.actions[${j}]: schedule action requires "prompt" field`,
+              );
+            break;
+          case 'message':
+            if (!action.jid)
+              errors.push(
+                `${prefix}.actions[${j}]: message action requires "jid" field`,
+              );
+            if (!action.text)
+              errors.push(
+                `${prefix}.actions[${j}]: message action requires "text" field`,
+              );
+            break;
         }
       }
     }
@@ -132,7 +175,7 @@ export function buildPolicyPrompt(
     ? `\n## Available Events\n${eventCatalog}\n`
     : '';
 
-  return `You are a policy generator for hex-events, an event-driven automation system.
+  return `You are a policy generator for the NanoClaw policy engine, an event-driven automation system.
 Given a user request, generate valid policy YAML.
 
 ## Policy Schema
@@ -247,5 +290,5 @@ ${userRequest}
 
 ## Instructions
 
-Generate a single valid policy YAML block that fulfills the user request. Output only the YAML inside a code fence. Use descriptive names. Include a description field.`;
+Generate a single valid policy YAML block that fulfills the user request. Output ONLY valid YAML. No explanation, no markdown fences, no commentary. Use descriptive names. Include a description field.`;
 }

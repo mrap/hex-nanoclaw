@@ -6,7 +6,9 @@ export function executeShell(
   action: ShellAction,
   eventPayload: Record<string, unknown>,
 ): { status: 'success' | 'error'; output?: string; error?: string } {
-  const command = renderTemplateShellSafe(action.command, { event: eventPayload });
+  const command = renderTemplateShellSafe(action.command, {
+    event: eventPayload,
+  });
   const timeout = (action.timeout ?? 30) * 1000;
 
   try {

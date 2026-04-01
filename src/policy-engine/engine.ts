@@ -109,7 +109,10 @@ export class PolicyEngine {
 
           for (const action of rule.actions) {
             const start = Date.now();
-            const actionResult = await this.executeAction(action, event.payload);
+            const actionResult = await this.executeAction(
+              action,
+              event.payload,
+            );
             const duration = Date.now() - start;
 
             this.store.logAction({

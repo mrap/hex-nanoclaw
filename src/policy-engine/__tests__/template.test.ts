@@ -72,12 +72,16 @@ describe('shellEscape', () => {
 
 describe('renderTemplateShellSafe', () => {
   it('escapes interpolated values for shell', () => {
-    const result = renderTemplateShellSafe('echo {{ name }}', { name: 'hello world' });
+    const result = renderTemplateShellSafe('echo {{ name }}', {
+      name: 'hello world',
+    });
     expect(result).toBe("echo 'hello world'");
   });
 
   it('escapes dangerous shell characters', () => {
-    const result = renderTemplateShellSafe('echo {{ val }}', { val: '; rm -rf /' });
+    const result = renderTemplateShellSafe('echo {{ val }}', {
+      val: '; rm -rf /',
+    });
     expect(result).toBe("echo '; rm -rf /'");
   });
 

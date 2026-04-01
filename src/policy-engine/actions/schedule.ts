@@ -40,7 +40,8 @@ export function executeSchedule(
       chat_jid: jid,
       prompt,
       schedule_type: action.schedule_type,
-      schedule_value: action.schedule_value === 'now' ? now : action.schedule_value,
+      schedule_value:
+        action.schedule_value === 'now' ? now : action.schedule_value,
       context_mode: 'isolated',
       next_run: now,
       status: 'active',

@@ -76,7 +76,11 @@ describe('evaluateConditions', () => {
     const conds: FieldCondition[] = [
       { field: 'id', op: 'regex', value: '[invalid(' },
     ];
-    const { passed, details } = evaluateConditions(conds, { id: 'anything' }, store);
+    const { passed, details } = evaluateConditions(
+      conds,
+      { id: 'anything' },
+      store,
+    );
     expect(passed).toBe(false);
     expect(details[0].passed).toBe(false);
   });

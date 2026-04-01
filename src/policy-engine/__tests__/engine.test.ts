@@ -21,11 +21,13 @@ function makePolicy(overrides: Partial<Policy> = {}): Policy {
     name: 'test',
     lifecycle: 'persistent',
     enabled: true,
-    rules: [{
-      name: 'r1',
-      trigger: { event: 'test.event' },
-      actions: [{ type: 'emit', event: 'chained' }],
-    }],
+    rules: [
+      {
+        name: 'r1',
+        trigger: { event: 'test.event' },
+        actions: [{ type: 'emit', event: 'chained' }],
+      },
+    ],
     ...overrides,
   };
 }
@@ -39,7 +41,7 @@ describe('PolicyEngine', () => {
     await engine.processOnce([policy]);
 
     const events = store.getUnprocessed(10);
-    expect(events.some(e => e.event_type === 'chained')).toBe(true);
+    expect(events.some((e) => e.event_type === 'chained')).toBe(true);
   });
 
   it('does not fire when event type does not match', async () => {
@@ -50,42 +52,46 @@ describe('PolicyEngine', () => {
     await engine.processOnce([policy]);
 
     const events = store.getUnprocessed(10);
-    expect(events.every(e => e.event_type !== 'chained')).toBe(true);
+    expect(events.every((e) => e.event_type !== 'chained')).toBe(true);
   });
 
   it('supports glob patterns in trigger', async () => {
     const engine = new PolicyEngine(store, { sendMessage: async () => {} });
     const policy = makePolicy({
-      rules: [{
-        name: 'glob-rule',
-        trigger: { event: 'boi.*' },
-        actions: [{ type: 'emit', event: 'matched' }],
-      }],
+      rules: [
+        {
+          name: 'glob-rule',
+          trigger: { event: 'boi.*' },
+          actions: [{ type: 'emit', event: 'matched' }],
+        },
+      ],
     });
 
     store.emit('boi.spec.completed', {}, 'test');
     await engine.processOnce([policy]);
 
     const events = store.getUnprocessed(10);
-    expect(events.some(e => e.event_type === 'matched')).toBe(true);
+    expect(events.some((e) => e.event_type === 'matched')).toBe(true);
   });
 
   it('evaluates conditions before firing', async () => {
     const engine = new PolicyEngine(store, { sendMessage: async () => {} });
     const policy = makePolicy({
-      rules: [{
-        name: 'conditional',
-        trigger: { event: 'test.event' },
-        conditions: [{ field: 'status', op: 'eq', value: 'done' }],
-        actions: [{ type: 'emit', event: 'fired' }],
-      }],
+      rules: [
+        {
+          name: 'conditional',
+          trigger: { event: 'test.event' },
+          conditions: [{ field: 'status', op: 'eq', value: 'done' }],
+          actions: [{ type: 'emit', event: 'fired' }],
+        },
+      ],
     });
 
     store.emit('test.event', { status: 'pending' }, 'test');
     await engine.processOnce([policy]);
 
     const events = store.getUnprocessed(10);
-    expect(events.every(e => e.event_type !== 'fired')).toBe(true);
+    expect(events.every((e) => e.event_type !== 'fired')).toBe(true);
   });
 
   it('logs evaluation details', async () => {
@@ -115,10 +121,13 @@ describe('PolicyEngine', () => {
     const engine = new PolicyEngine(store, { sendMessage: async () => {} });
 
     db.prepare(
-      `INSERT INTO policies (name, yaml_content, source, enabled) VALUES (?, ?, ?, ?)`
+      `INSERT INTO policies (name, yaml_content, source, enabled) VALUES (?, ?, ?, ?)`,
     ).run('delete-me', 'name: delete-me', 'test', 1);
 
-    const policy = makePolicy({ name: 'delete-me', lifecycle: 'oneshot-delete' });
+    const policy = makePolicy({
+      name: 'delete-me',
+      lifecycle: 'oneshot-delete',
+    });
 
     store.emit('test.event', {}, 'test');
     const result = await engine.processOnce([policy]);
@@ -126,7 +135,9 @@ describe('PolicyEngine', () => {
     expect(policy.enabled).toBe(false);
     expect(result.deletedPolicies).toContain('delete-me');
 
-    const remaining = db.prepare('SELECT * FROM policies WHERE name = ?').get('delete-me');
+    const remaining = db
+      .prepare('SELECT * FROM policies WHERE name = ?')
+      .get('delete-me');
     expect(remaining).toBeUndefined();
   });
 
@@ -134,15 +145,20 @@ describe('PolicyEngine', () => {
     const engine = new PolicyEngine(store, { sendMessage: async () => {} });
 
     db.prepare(
-      `INSERT INTO policies (name, yaml_content, source, enabled) VALUES (?, ?, ?, ?)`
+      `INSERT INTO policies (name, yaml_content, source, enabled) VALUES (?, ?, ?, ?)`,
     ).run('disable-persist', 'name: disable-persist', 'test', 1);
 
-    const policy = makePolicy({ name: 'disable-persist', lifecycle: 'oneshot-disable' });
+    const policy = makePolicy({
+      name: 'disable-persist',
+      lifecycle: 'oneshot-disable',
+    });
 
     store.emit('test.event', {}, 'test');
     await engine.processOnce([policy]);
 
-    const row = db.prepare('SELECT enabled FROM policies WHERE name = ?').get('disable-persist') as { enabled: number };
+    const row = db
+      .prepare('SELECT enabled FROM policies WHERE name = ?')
+      .get('disable-persist') as { enabled: number };
     expect(row.enabled).toBe(0);
   });
 
@@ -158,35 +174,46 @@ describe('PolicyEngine', () => {
     store.emit('test.event', {}, 'test');
     await engine.processOnce([policy]);
 
-    const allChained = db.prepare(
-      `SELECT COUNT(*) as cnt FROM events WHERE event_type = 'chained'`
-    ).get() as { cnt: number };
+    const allChained = db
+      .prepare(
+        `SELECT COUNT(*) as cnt FROM events WHERE event_type = 'chained'`,
+      )
+      .get() as { cnt: number };
     expect(allChained.cnt).toBe(1);
   });
 
   it('processes deferred events when due', () => {
     const engine = new PolicyEngine(store, { sendMessage: async () => {} });
 
-    store.addDeferred('deferred.event', { x: 1 }, 'test', new Date(Date.now() - 1000).toISOString());
+    store.addDeferred(
+      'deferred.event',
+      { x: 1 },
+      'test',
+      new Date(Date.now() - 1000).toISOString(),
+    );
 
     engine.processDeferredOnce();
 
     const events = store.getUnprocessed(10);
-    expect(events.some(e => e.event_type === 'deferred.event')).toBe(true);
+    expect(events.some((e) => e.event_type === 'deferred.event')).toBe(true);
   });
 
   it('awaits message actions properly', async () => {
     let messageSent = false;
     const engine = new PolicyEngine(store, {
-      sendMessage: async () => { messageSent = true; },
+      sendMessage: async () => {
+        messageSent = true;
+      },
     });
 
     const policy = makePolicy({
-      rules: [{
-        name: 'msg-rule',
-        trigger: { event: 'test.event' },
-        actions: [{ type: 'message', jid: 'test@jid', text: 'hello' }],
-      }],
+      rules: [
+        {
+          name: 'msg-rule',
+          trigger: { event: 'test.event' },
+          actions: [{ type: 'message', jid: 'test@jid', text: 'hello' }],
+        },
+      ],
     });
 
     store.emit('test.event', {}, 'test');

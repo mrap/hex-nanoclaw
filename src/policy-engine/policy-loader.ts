@@ -101,7 +101,12 @@ export class PolicyLoader {
             new RegExp(String(cond.value));
           } catch {
             logger.warn(
-              { policy: policy.name, rule: rule.name, pattern: cond.value, source },
+              {
+                policy: policy.name,
+                rule: rule.name,
+                pattern: cond.value,
+                source,
+              },
               'Invalid regex in policy condition — will always fail',
             );
           }
@@ -193,7 +198,10 @@ export class PolicyLoader {
               text: String(a.text),
             };
           default:
-            logger.warn({ action_type: a.type }, 'Unknown action type in policy — skipping');
+            logger.warn(
+              { action_type: a.type },
+              'Unknown action type in policy — skipping',
+            );
             return null;
         }
       })

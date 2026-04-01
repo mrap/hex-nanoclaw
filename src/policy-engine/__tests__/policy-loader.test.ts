@@ -60,7 +60,7 @@ rules:
         command: echo hi
 `;
     db.prepare(
-      `INSERT INTO policies (name, yaml_content, source, enabled) VALUES (?, ?, ?, ?)`
+      `INSERT INTO policies (name, yaml_content, source, enabled) VALUES (?, ?, ?, ?)`,
     ).run('db-policy', yamlContent, 'llm', 1);
 
     const loader = new PolicyLoader(tmpDir, store);

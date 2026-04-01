@@ -118,9 +118,7 @@ export class EventStore {
       disablePolicy: db.prepare(
         `UPDATE policies SET enabled = 0, updated_at = datetime('now') WHERE name = ?`,
       ),
-      deletePolicy: db.prepare(
-        `DELETE FROM policies WHERE name = ?`,
-      ),
+      deletePolicy: db.prepare(`DELETE FROM policies WHERE name = ?`),
     };
   }
 

@@ -16,9 +16,8 @@ export function executeEmit(
     const payload = action.payload ?? {};
     const rendered: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(payload)) {
-      rendered[k] = typeof v === 'string'
-        ? renderTemplate(v, { event: eventPayload })
-        : v;
+      rendered[k] =
+        typeof v === 'string' ? renderTemplate(v, { event: eventPayload }) : v;
     }
 
     if (action.delay) {
@@ -28,7 +27,13 @@ export function executeEmit(
       }
       const delayMs = parseDurationMs(action.delay);
       const fireAt = new Date(Date.now() + delayMs).toISOString();
-      store.addDeferred(eventType, rendered, 'policy', fireAt, action.cancel_group);
+      store.addDeferred(
+        eventType,
+        rendered,
+        'policy',
+        fireAt,
+        action.cancel_group,
+      );
     } else {
       store.emit(eventType, rendered, 'policy');
     }
