@@ -30,6 +30,26 @@ import { RegisteredGroup } from './types.js';
 
 const onecli = new OneCLI({ url: ONECLI_URL });
 
+/**
+ * Load per-group MCP server configuration from config/groups.json.
+ * Returns an empty object if no config exists for the group.
+ */
+function getGroupMcpConfig(
+  groupFolder: string,
+): Record<string, unknown> {
+  try {
+    const configPath = path.join(process.cwd(), 'config', 'groups.json');
+    if (!fs.existsSync(configPath)) return {};
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    return (
+      (config.groups?.[groupFolder]?.mcpServers as Record<string, unknown>) ||
+      {}
+    );
+  } catch {
+    return {};
+  }
+}
+
 // Sentinel markers for robust output parsing (must match agent-runner)
 const OUTPUT_START_MARKER = '---NANOCLAW_OUTPUT_START---';
 const OUTPUT_END_MARKER = '---NANOCLAW_OUTPUT_END---';
@@ -126,26 +146,24 @@ function buildVolumeMounts(
   fs.mkdirSync(groupSessionsDir, { recursive: true });
   const settingsFile = path.join(groupSessionsDir, 'settings.json');
   if (!fs.existsSync(settingsFile)) {
-    fs.writeFileSync(
-      settingsFile,
-      JSON.stringify(
-        {
-          env: {
-            // Enable agent swarms (subagent orchestration)
-            // https://code.claude.com/docs/en/agent-teams#orchestrate-teams-of-claude-code-sessions
-            CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
-            // Load CLAUDE.md from additional mounted directories
-            // https://code.claude.com/docs/en/memory#load-memory-from-additional-directories
-            CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: '1',
-            // Enable Claude's memory feature (persists user preferences between sessions)
-            // https://code.claude.com/docs/en/memory#manage-auto-memory
-            CLAUDE_CODE_DISABLE_AUTO_MEMORY: '0',
-          },
-        },
-        null,
-        2,
-      ) + '\n',
-    );
+    const mcpServers = getGroupMcpConfig(group.folder);
+    const settings: Record<string, unknown> = {
+      env: {
+        // Enable agent swarms (subagent orchestration)
+        // https://code.claude.com/docs/en/agent-teams#orchestrate-teams-of-claude-code-sessions
+        CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: '1',
+        // Load CLAUDE.md from additional mounted directories
+        // https://code.claude.com/docs/en/memory#load-memory-from-additional-directories
+        CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: '1',
+        // Enable Claude's memory feature (persists user preferences between sessions)
+        // https://code.claude.com/docs/en/memory#manage-auto-memory
+        CLAUDE_CODE_DISABLE_AUTO_MEMORY: '0',
+      },
+    };
+    if (Object.keys(mcpServers).length > 0) {
+      settings.mcpServers = mcpServers;
+    }
+    fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2) + '\n');
   }
 
   // Sync skills from container/skills/ into each group's .claude/skills/
@@ -216,6 +234,36 @@ function buildVolumeMounts(
     mounts.push({
       hostPath: catalogPath,
       containerPath: '/workspace/event-catalog.yaml',
+      readonly: true,
+    });
+  }
+
+  // Mount hex skills read-only into all containers
+  const skillsPath = path.resolve(
+    process.env.HOME || '',
+    'mrap-hex',
+    '.claude',
+    'skills',
+  );
+  if (fs.existsSync(skillsPath)) {
+    mounts.push({
+      hostPath: skillsPath,
+      containerPath: '/workspace/extra/skills',
+      readonly: true,
+    });
+  }
+
+  // Mount hex scripts read-only into all containers
+  const scriptsPath = path.resolve(
+    process.env.HOME || '',
+    'mrap-hex',
+    '.claude',
+    'scripts',
+  );
+  if (fs.existsSync(scriptsPath)) {
+    mounts.push({
+      hostPath: scriptsPath,
+      containerPath: '/workspace/extra/scripts',
       readonly: true,
     });
   }
