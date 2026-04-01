@@ -344,7 +344,7 @@ server.tool(
     name: z.string().regex(/^[a-z0-9][a-z0-9._-]*$/).describe('Skill name (lowercase, hyphens, dots, underscores)'),
     content: z.string().max(100_000).describe('Full SKILL.md content with YAML frontmatter (name, description) and markdown body'),
   },
-  async (args) => {
+  async (args: { name: string; content: string }) => {
     writeIpcFile(TASKS_DIR, { type: 'skill_create', name: args.name, content: args.content });
     return { content: [{ type: 'text' as const, text: `Skill "${args.name}" submitted for security review. It will be available in the next session if approved.` }] };
   },
@@ -358,7 +358,7 @@ server.tool(
     find: z.string().describe('Text to find in the skill (whitespace-tolerant matching)'),
     replace: z.string().describe('Replacement text'),
   },
-  async (args) => {
+  async (args: { name: string; find: string; replace: string }) => {
     writeIpcFile(TASKS_DIR, { type: 'skill_patch', name: args.name, find: args.find, replace: args.replace });
     return { content: [{ type: 'text' as const, text: `Patch for skill "${args.name}" submitted. Will be applied after security review.` }] };
   },
@@ -373,7 +373,7 @@ server.tool(
     content: z.string().max(2200).describe('The entry content (for add/replace) or substring to match (for remove)'),
     match: z.string().optional().describe('For replace: substring identifying which entry to replace'),
   },
-  async (args) => {
+  async (args: { store: string; action: string; content: string; match?: string }) => {
     if (args.action === 'replace' && !args.match) {
       return { content: [{ type: 'text' as const, text: 'replace action requires "match" parameter to identify which entry to replace.' }], isError: true };
     }
