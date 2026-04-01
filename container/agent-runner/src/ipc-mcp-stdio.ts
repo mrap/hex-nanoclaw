@@ -337,6 +337,51 @@ Use available_groups.json to find the JID for a group. The folder name must be c
   },
 );
 
+server.tool(
+  'create_skill',
+  'Create a new skill from experience. Use after completing a complex task (5+ tool calls), fixing a tricky error, or discovering a reusable workflow. The skill will be security-scanned before installation.',
+  {
+    name: z.string().regex(/^[a-z0-9][a-z0-9._-]*$/).describe('Skill name (lowercase, hyphens, dots, underscores)'),
+    content: z.string().max(100_000).describe('Full SKILL.md content with YAML frontmatter (name, description) and markdown body'),
+  },
+  async (args) => {
+    writeIpcFile(TASKS_DIR, { type: 'skill_create', name: args.name, content: args.content });
+    return { content: [{ type: 'text' as const, text: `Skill "${args.name}" submitted for security review. It will be available in the next session if approved.` }] };
+  },
+);
+
+server.tool(
+  'patch_skill',
+  'Patch an existing skill when you find it outdated, incomplete, or wrong during use. Uses find-and-replace with whitespace-tolerant matching. Prefer this over recreating the entire skill.',
+  {
+    name: z.string().regex(/^[a-z0-9][a-z0-9._-]*$/).describe('Name of the skill to patch'),
+    find: z.string().describe('Text to find in the skill (whitespace-tolerant matching)'),
+    replace: z.string().describe('Replacement text'),
+  },
+  async (args) => {
+    writeIpcFile(TASKS_DIR, { type: 'skill_patch', name: args.name, find: args.find, replace: args.replace });
+    return { content: [{ type: 'text' as const, text: `Patch for skill "${args.name}" submitted. Will be applied after security review.` }] };
+  },
+);
+
+server.tool(
+  'memory_update',
+  'Update bounded agent memory (MEMORY.md or USER.md). MEMORY.md stores environment facts, tool quirks, and conventions (2200 char limit). USER.md stores user preferences and communication style (1375 char limit). Use after learning something that will reduce future corrections.',
+  {
+    store: z.enum(['memory', 'user']).describe('Which store to update'),
+    action: z.enum(['add', 'remove', 'replace']).describe('add: append entry. remove: delete by substring. replace: swap entry matching "match" with new content.'),
+    content: z.string().max(2200).describe('The entry content (for add/replace) or substring to match (for remove)'),
+    match: z.string().optional().describe('For replace: substring identifying which entry to replace'),
+  },
+  async (args) => {
+    if (args.action === 'replace' && !args.match) {
+      return { content: [{ type: 'text' as const, text: 'replace action requires "match" parameter to identify which entry to replace.' }], isError: true };
+    }
+    writeIpcFile(TASKS_DIR, { type: 'memory_update', store: args.store, action: args.action, content: args.content, match: args.match });
+    return { content: [{ type: 'text' as const, text: `Memory ${args.action} request submitted for "${args.store}" store.` }] };
+  },
+);
+
 // Start the stdio transport
 const transport = new StdioServerTransport();
 await server.connect(transport);
