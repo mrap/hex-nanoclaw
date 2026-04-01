@@ -53,6 +53,11 @@ const SHELL_COMMAND_ALLOWLIST: AllowedCommand[] = [
     fixedArgs: [`${process.env.HOME}/.hex-events/hex_emit.py`],
     label: 'hex-emit',
   },
+  {
+    binary: 'bash',
+    fixedArgs: [`${process.cwd()}/scripts/nanoclaw-emit.sh`],
+    label: 'nanoclaw-emit',
+  },
 ];
 
 const MAX_SHELL_TIMEOUT_S = 30;
