@@ -1,9 +1,19 @@
 {
   "allowedRoots": [
     { "path": "~/mrap-hex", "allowReadWrite": true, "description": "hex agent workspace" },
+    { "path": "~/mrap-hex/.claude/skills", "allowReadWrite": false, "description": "hex skills (read-only for all groups)" },
+    { "path": "~/mrap-hex/.claude/scripts", "allowReadWrite": false, "description": "hex scripts (read-only for all groups)" },
     { "path": "~/.boi/queue", "allowReadWrite": true, "description": "BOI spec queue" },
-    { "path": "~/.hex-events", "allowReadWrite": false, "description": "hex-events (read-only, emit via IPC)" }
+    { "path": "~/.boi/output", "allowReadWrite": false, "description": "BOI output (read-only for non-BOI groups)" },
+    { "path": "~/.hex-events", "allowReadWrite": false, "description": "hex-events (read-only, emit via IPC)" },
+    { "path": "~/github.com/mrap", "allowReadWrite": true, "description": "all repos (BOI group only, read-write)" }
   ],
-  "blockedPatterns": [],
-  "nonMainReadOnly": true
+  "blockedPatterns": [
+    "**/.env",
+    "**/.git/config",
+    "**/credentials*",
+    "**/*secret*",
+    "**/.ssh"
+  ],
+  "nonMainReadOnly": false
 }

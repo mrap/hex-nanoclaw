@@ -1,0 +1,17 @@
+name: session-lifecycle
+description: "Log session start/stop events. Replaces hex SessionStart and Stop hooks."
+lifecycle: persistent
+enabled: true
+rules:
+  - name: log-session-start
+    trigger:
+      event: "system.started"
+    actions:
+      - type: shell
+        command: "echo '[session] NanoClaw started at {{ event.timestamp }}' >> /tmp/nanoclaw-session.log"
+  - name: log-session-stop
+    trigger:
+      event: "system.shutdown"
+    actions:
+      - type: shell
+        command: "echo '[session] NanoClaw stopped at {{ event.timestamp }}' >> /tmp/nanoclaw-session.log"
