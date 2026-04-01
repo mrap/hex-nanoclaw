@@ -771,7 +771,8 @@ async function main(): Promise<void> {
       if (text) await channel.sendMessage(jid, text);
     },
     scheduleDeps: {
-      createTask: (task) => createTask(task as Parameters<typeof createTask>[0]),
+      createTask: (task) =>
+        createTask(task as Parameters<typeof createTask>[0]),
       findGroupJid: (folder) => {
         const entry = Object.entries(registeredGroups).find(
           ([_, g]) => g.folder === folder,
@@ -804,14 +805,22 @@ async function main(): Promise<void> {
     setTimeout(runPolicyEngine, POLICY_POLL_INTERVAL);
   };
 
-  eventStore.emit('system.started', { timestamp: new Date().toISOString() }, 'system');
+  eventStore.emit(
+    'system.started',
+    { timestamp: new Date().toISOString() },
+    'system',
+  );
   runPolicyEngine();
   logger.info('Policy engine started (2s poll interval)');
 
   // Add shutdown cleanup for policy engine DB
   const originalShutdown = shutdown;
   const shutdownWithPolicyEngine = async (signal: string) => {
-    eventStore.emit('system.shutdown', { timestamp: new Date().toISOString() }, 'system');
+    eventStore.emit(
+      'system.shutdown',
+      { timestamp: new Date().toISOString() },
+      'system',
+    );
     policyDb.close();
     await originalShutdown(signal);
   };
