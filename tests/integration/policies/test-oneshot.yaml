@@ -1,0 +1,11 @@
+name: test-oneshot
+description: "Fires once then self-deletes"
+lifecycle: oneshot-delete
+enabled: true
+rules:
+  - name: fire-once
+    trigger:
+      event: "oneshot.trigger"
+    actions:
+      - type: emit
+        event: oneshot.fired
