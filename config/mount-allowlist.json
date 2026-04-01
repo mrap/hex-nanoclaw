@@ -15,5 +15,5 @@
     "**/*secret*",
     "**/.ssh"
   ],
-  "nonMainReadOnly": true
+  "nonMainReadOnly": false
 }

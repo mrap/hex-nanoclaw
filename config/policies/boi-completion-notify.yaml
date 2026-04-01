@@ -11,6 +11,7 @@ rules:
         event: boi.result.ready
         payload:
           spec_id: "{{ event.spec_id }}"
+          status: "success"
           target_repo: "{{ event.target_repo }}"
           summary: "{{ event.summary }}"
           source_group: "{{ event.source }}"
@@ -22,5 +23,6 @@ rules:
         event: boi.result.ready
         payload:
           spec_id: "{{ event.spec_id }}"
+          status: "failed"
           error: "{{ event.error }}"
           source_group: "{{ event.source }}"
