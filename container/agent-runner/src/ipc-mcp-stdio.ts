@@ -354,7 +354,7 @@ server.tool(
   'patch_skill',
   'Patch an existing skill when you find it outdated, incomplete, or wrong during use. Uses find-and-replace with whitespace-tolerant matching. Prefer this over recreating the entire skill.',
   {
-    name: z.string().describe('Name of the skill to patch'),
+    name: z.string().regex(/^[a-z0-9][a-z0-9._-]*$/).describe('Name of the skill to patch'),
     find: z.string().describe('Text to find in the skill (whitespace-tolerant matching)'),
     replace: z.string().describe('Replacement text'),
   },
@@ -374,6 +374,9 @@ server.tool(
     match: z.string().optional().describe('For replace: substring identifying which entry to replace'),
   },
   async (args) => {
+    if (args.action === 'replace' && !args.match) {
+      return { content: [{ type: 'text' as const, text: 'replace action requires "match" parameter to identify which entry to replace.' }], isError: true };
+    }
     writeIpcFile(TASKS_DIR, { type: 'memory_update', store: args.store, action: args.action, content: args.content, match: args.match });
     return { content: [{ type: 'text' as const, text: `Memory ${args.action} request submitted for "${args.store}" store.` }] };
   },

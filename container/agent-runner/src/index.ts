@@ -375,19 +375,21 @@ async function runQuery(
     globalClaudeMd = fs.readFileSync(globalClaudeMdPath, 'utf-8');
   }
 
-  // Load frozen memory snapshot
+  // Load frozen memory snapshot (size-capped to prevent context bloat)
+  const MAX_MEMORY_CHARS = 4096;
+  const MAX_USER_CHARS = 2048;
   let memorySnapshot = '';
   const memoryPath = '/workspace/group/MEMORY.md';
   const userPath = '/workspace/group/USER.md';
 
   if (fs.existsSync(memoryPath)) {
-    const memoryContent = fs.readFileSync(memoryPath, 'utf-8').trim();
+    const memoryContent = fs.readFileSync(memoryPath, 'utf-8').slice(0, MAX_MEMORY_CHARS).trim();
     if (memoryContent) {
       memorySnapshot += '\n\n## Agent Memory (frozen snapshot — updates via memory_update tool write to disk, visible next session)\n' + memoryContent + '\n';
     }
   }
   if (fs.existsSync(userPath)) {
-    const userContent = fs.readFileSync(userPath, 'utf-8').trim();
+    const userContent = fs.readFileSync(userPath, 'utf-8').slice(0, MAX_USER_CHARS).trim();
     if (userContent) {
       memorySnapshot += '\n\n## User Preferences (frozen snapshot)\n' + userContent + '\n';
     }
