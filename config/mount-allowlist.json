@@ -1,0 +1,8 @@
+{
+  "allowedPaths": [
+    "~/mrap-hex",
+    "~/.boi/queue",
+    "~/.hex-events"
+  ],
+  "comment": "Copy to ~/.config/nanoclaw/mount-allowlist.json and adjust paths for your system"
+}
