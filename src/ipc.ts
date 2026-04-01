@@ -25,6 +25,22 @@ export interface IpcDeps {
   onTasksChanged: () => void;
 }
 
+// hex-specific: Allowlisted commands for shell_command IPC type.
+// SECURITY: Only these exact command prefixes are permitted.
+// Adding to this list requires security review.
+const SHELL_COMMAND_ALLOWLIST: string[] = [
+  'python3 ~/.boi/lib/coordination.py',
+  'bash ~/.boi/boi dispatch',
+  'python3 ~/.hex-events/hex_emit.py',
+];
+
+function isShellCommandAllowed(command: string): boolean {
+  const normalized = command.trim();
+  return SHELL_COMMAND_ALLOWLIST.some((prefix) =>
+    normalized.startsWith(prefix),
+  );
+}
+
 let ipcWatcherRunning = false;
 
 export function startIpcWatcher(deps: IpcDeps): void {
@@ -173,6 +189,9 @@ export async function processTaskIpc(
     trigger?: string;
     requiresTrigger?: boolean;
     containerConfig?: RegisteredGroup['containerConfig'];
+    // For shell_command
+    command?: string;
+    timeout?: number;
   },
   sourceGroup: string, // Verified identity from IPC directory
   isMain: boolean, // Verified from directory path
@@ -441,9 +460,9 @@ export async function processTaskIpc(
           );
           break;
         }
-        // Defense in depth: agent cannot set isMain via IPC.                                                                                                                                    
-        // Preserve isMain from the existing registration so IPC config                                                                                                                          
-        // updates (e.g. adding additionalMounts) don't strip the flag.                                                                                                                          
+        // Defense in depth: agent cannot set isMain via IPC.
+        // Preserve isMain from the existing registration so IPC config
+        // updates (e.g. adding additionalMounts) don't strip the flag.
         const existingGroup = registeredGroups[data.jid];
         deps.registerGroup(data.jid, {
           name: data.name,
@@ -461,6 +480,41 @@ export async function processTaskIpc(
         );
       }
       break;
+
+    case 'shell_command': {
+      // hex-specific: Execute allowlisted host commands from container IPC
+      const command = data.command;
+      const timeout = data.timeout ?? 10;
+      if (!command || typeof command !== 'string') {
+        logger.error('shell_command: missing or invalid command field');
+        break;
+      }
+      if (!isShellCommandAllowed(command)) {
+        logger.error(
+          { command: command.substring(0, 80) },
+          'shell_command BLOCKED: not in allowlist',
+        );
+        break;
+      }
+      try {
+        const { execSync } = await import('child_process');
+        const result = execSync(command, {
+          timeout: timeout * 1000,
+          encoding: 'utf-8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+        });
+        logger.info(
+          { command: command.substring(0, 50) },
+          'shell_command executed',
+        );
+      } catch (err: any) {
+        logger.error(
+          { command: command.substring(0, 50), error: err.message },
+          'shell_command failed',
+        );
+      }
+      break;
+    }
 
     default:
       logger.warn({ type: data.type }, 'Unknown IPC task type');
