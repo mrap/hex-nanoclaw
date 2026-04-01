@@ -31,6 +31,9 @@ export function createSlackChannel(opts: ChannelOpts): Channel | null {
 
   let botUserId = '';
 
+  /** Cache display names to avoid hitting Slack rate limits on users.info */
+  const displayNameCache = new Map<string, string>();
+
   async function discoverChannels(): Promise<void> {
     try {
       let cursor: string | undefined;
@@ -75,15 +78,18 @@ export function createSlackChannel(opts: ChannelOpts): Channel | null {
     const jid = toJid(channelId);
     const ts = message.ts || new Date().toISOString();
 
-    let senderName = message.user;
-    try {
-      const userInfo = await app.client.users.info({ user: message.user });
-      senderName =
-        userInfo.user?.profile?.display_name ||
-        userInfo.user?.real_name ||
-        message.user;
-    } catch {
-      /* keep user ID as fallback */
+    let senderName = displayNameCache.get(message.user) ?? '';
+    if (!senderName) {
+      try {
+        const userInfo = await app.client.users.info({ user: message.user });
+        senderName =
+          userInfo.user?.profile?.display_name ||
+          userInfo.user?.real_name ||
+          message.user;
+      } catch {
+        senderName = message.user; /* keep user ID as fallback */
+      }
+      displayNameCache.set(message.user, senderName);
     }
 
     const newMessage: NewMessage = {
@@ -140,7 +146,7 @@ export function createSlackChannel(opts: ChannelOpts): Channel | null {
       logger.info('Slack: disconnected');
     },
 
-    async syncGroups(): Promise<void> {
+    async syncGroups(_force: boolean): Promise<void> {
       await discoverChannels();
     },
   };
