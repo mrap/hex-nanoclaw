@@ -1,0 +1,20 @@
+name: skill-propagation-notify
+description: "Notify ops group when any agent creates a new skill for cross-group evaluation"
+lifecycle: persistent
+enabled: true
+rules:
+  - name: notify-ops-on-skill-created
+    trigger:
+      event: "agent.skill.created"
+    conditions:
+      - field: group
+        op: neq
+        value: "ops"
+    actions:
+      - type: message
+        jid: "{{ops_chat_jid}}"
+        text: |
+          New skill created by {{payload.group}}: {{payload.skill_name}}
+          Scan verdict: {{payload.scan_verdict}}
+          Review at data/sessions/{{payload.group}}/skills/{{payload.skill_name}}/SKILL.md
+          To promote to all groups, use the skill_promote IPC action.

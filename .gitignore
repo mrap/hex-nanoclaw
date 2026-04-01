@@ -26,6 +26,8 @@ groups/boi/*
 !groups/ops/CLAUDE.md
 !groups/gws/CLAUDE.md
 !groups/boi/CLAUDE.md
+!groups/*/MEMORY.md
+!groups/*/USER.md
 groups/*/conversations/
 
 # Secrets

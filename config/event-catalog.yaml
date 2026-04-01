@@ -121,3 +121,27 @@ events:
       reason: "string"
       source_group: "string"
     emit_when: "When a policy request violates approval rules"
+
+  # --- Self-improvement ---
+  agent.skill.created:
+    description: "An agent created a new skill via IPC"
+    payload:
+      group: "string - group that created the skill"
+      skill_name: "string - name of the skill"
+      scan_verdict: "string - security scan result (safe, caution)"
+    emit_when: "After a skill passes security scanning and is written to disk"
+
+  agent.skill.patched:
+    description: "An agent patched an existing skill via IPC"
+    payload:
+      group: "string - group that patched the skill"
+      skill_name: "string - name of the skill"
+    emit_when: "After a skill patch passes security scanning and is applied"
+
+  ops.skill.promoted:
+    description: "Ops promoted a skill to all groups"
+    payload:
+      skill_name: "string - name of the promoted skill"
+      from_group: "string - group that originally created it"
+      promoted_to: "number - count of groups that received the skill"
+    emit_when: "After ops copies a skill to all registered groups"
