@@ -1,10 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { spawnSync } from 'child_process';
 
-import {
-  _initTestDatabase,
-  setRegisteredGroup,
-} from './db.js';
+import { _initTestDatabase, setRegisteredGroup } from './db.js';
 import { processTaskIpc, parseShellCommand, IpcDeps } from './ipc.js';
 import { RegisteredGroup } from './types.js';
 
@@ -41,7 +38,9 @@ describe('parseShellCommand', () => {
   });
 
   it('returns null for wrong binary', () => {
-    expect(parseShellCommand(`node ${HOME}/.boi/lib/coordination.py`)).toBeNull();
+    expect(
+      parseShellCommand(`node ${HOME}/.boi/lib/coordination.py`),
+    ).toBeNull();
   });
 
   it('returns null for wrong fixed arg path', () => {
@@ -49,7 +48,9 @@ describe('parseShellCommand', () => {
   });
 
   it('returns valid result for exact prefix match (coordination)', () => {
-    const result = parseShellCommand(`python3 ${HOME}/.boi/lib/coordination.py`);
+    const result = parseShellCommand(
+      `python3 ${HOME}/.boi/lib/coordination.py`,
+    );
     expect(result).not.toBeNull();
     expect(result!.binary).toBe('python3');
     expect(result!.args).toEqual([`${HOME}/.boi/lib/coordination.py`]);
@@ -57,62 +58,98 @@ describe('parseShellCommand', () => {
   });
 
   it('returns valid result with user args appended', () => {
-    const result = parseShellCommand(`python3 ${HOME}/.boi/lib/coordination.py check todo.md`);
+    const result = parseShellCommand(
+      `python3 ${HOME}/.boi/lib/coordination.py check todo.md`,
+    );
     expect(result).not.toBeNull();
-    expect(result!.args).toEqual([`${HOME}/.boi/lib/coordination.py`, 'check', 'todo.md']);
+    expect(result!.args).toEqual([
+      `${HOME}/.boi/lib/coordination.py`,
+      'check',
+      'todo.md',
+    ]);
     expect(result!.label).toBe('coordination');
   });
 
   it('expands tilde in command to match allowlist', () => {
-    const result = parseShellCommand(`python3 ~/.boi/lib/coordination.py lock file`);
+    const result = parseShellCommand(
+      `python3 ~/.boi/lib/coordination.py lock file`,
+    );
     expect(result).not.toBeNull();
     expect(result!.binary).toBe('python3');
-    expect(result!.args).toEqual([`${HOME}/.boi/lib/coordination.py`, 'lock', 'file']);
+    expect(result!.args).toEqual([
+      `${HOME}/.boi/lib/coordination.py`,
+      'lock',
+      'file',
+    ]);
     expect(result!.label).toBe('coordination');
   });
 
   it('returns null when user arg contains semicolon', () => {
-    expect(parseShellCommand(`python3 ${HOME}/.boi/lib/coordination.py ; rm -rf /`)).toBeNull();
+    expect(
+      parseShellCommand(`python3 ${HOME}/.boi/lib/coordination.py ; rm -rf /`),
+    ).toBeNull();
   });
 
   it('returns null when user arg contains pipe', () => {
-    expect(parseShellCommand(`python3 ${HOME}/.boi/lib/coordination.py | cat`)).toBeNull();
+    expect(
+      parseShellCommand(`python3 ${HOME}/.boi/lib/coordination.py | cat`),
+    ).toBeNull();
   });
 
   it('returns null when user arg contains dollar sign', () => {
-    expect(parseShellCommand(`python3 ${HOME}/.boi/lib/coordination.py $HOME`)).toBeNull();
+    expect(
+      parseShellCommand(`python3 ${HOME}/.boi/lib/coordination.py $HOME`),
+    ).toBeNull();
   });
 
   it('returns null when user arg contains backtick', () => {
-    expect(parseShellCommand(`python3 ${HOME}/.boi/lib/coordination.py \`whoami\``)).toBeNull();
+    expect(
+      parseShellCommand(`python3 ${HOME}/.boi/lib/coordination.py \`whoami\``),
+    ).toBeNull();
   });
 
   it('returns null when user arg contains ampersand', () => {
-    expect(parseShellCommand(`python3 ${HOME}/.boi/lib/coordination.py & echo pwned`)).toBeNull();
+    expect(
+      parseShellCommand(
+        `python3 ${HOME}/.boi/lib/coordination.py & echo pwned`,
+      ),
+    ).toBeNull();
   });
 
   it('handles extra spaces between parts', () => {
-    const result = parseShellCommand(`python3   ${HOME}/.boi/lib/coordination.py   check`);
+    const result = parseShellCommand(
+      `python3   ${HOME}/.boi/lib/coordination.py   check`,
+    );
     expect(result).not.toBeNull();
     expect(result!.args).toEqual([`${HOME}/.boi/lib/coordination.py`, 'check']);
   });
 
   it('rejects case mismatch in binary (Python3 vs python3)', () => {
-    expect(parseShellCommand(`Python3 ${HOME}/.boi/lib/coordination.py`)).toBeNull();
+    expect(
+      parseShellCommand(`Python3 ${HOME}/.boi/lib/coordination.py`),
+    ).toBeNull();
   });
 
   it('allows path traversal in user args (no metachar)', () => {
-    const result = parseShellCommand(`python3 ${HOME}/.boi/lib/coordination.py ../../../etc/passwd`);
+    const result = parseShellCommand(
+      `python3 ${HOME}/.boi/lib/coordination.py ../../../etc/passwd`,
+    );
     expect(result).not.toBeNull();
     expect(result!.args).toContain('../../../etc/passwd');
   });
 
   it('matches boi-dispatch allowlist entry', () => {
-    const result = parseShellCommand(`bash ${HOME}/.boi/boi dispatch some-spec.yaml`);
+    const result = parseShellCommand(
+      `bash ${HOME}/.boi/boi dispatch some-spec.yaml`,
+    );
     expect(result).not.toBeNull();
     expect(result!.label).toBe('boi-dispatch');
     expect(result!.binary).toBe('bash');
-    expect(result!.args).toEqual([`${HOME}/.boi/boi`, 'dispatch', 'some-spec.yaml']);
+    expect(result!.args).toEqual([
+      `${HOME}/.boi/boi`,
+      'dispatch',
+      'some-spec.yaml',
+    ]);
   });
 });
 
@@ -165,7 +202,10 @@ describe('shell_command IPC handler', () => {
 
   it('blocks non-main group and does not execute', async () => {
     await processTaskIpc(
-      { type: 'shell_command', command: `python3 ${HOME}/.boi/lib/coordination.py check` },
+      {
+        type: 'shell_command',
+        command: `python3 ${HOME}/.boi/lib/coordination.py check`,
+      },
       'other-group',
       false,
       deps,
@@ -223,7 +263,10 @@ describe('shell_command IPC handler', () => {
 
   it('blocks command with shell metacharacter in args', async () => {
     await processTaskIpc(
-      { type: 'shell_command', command: `python3 ${HOME}/.boi/lib/coordination.py ; rm -rf /` },
+      {
+        type: 'shell_command',
+        command: `python3 ${HOME}/.boi/lib/coordination.py ; rm -rf /`,
+      },
       'whatsapp_main',
       true,
       deps,
@@ -238,7 +281,10 @@ describe('shell_command IPC handler', () => {
 
   it('defaults timeout to 10s when not provided', async () => {
     await processTaskIpc(
-      { type: 'shell_command', command: `python3 ${HOME}/.boi/lib/coordination.py check` },
+      {
+        type: 'shell_command',
+        command: `python3 ${HOME}/.boi/lib/coordination.py check`,
+      },
       'whatsapp_main',
       true,
       deps,
@@ -253,7 +299,11 @@ describe('shell_command IPC handler', () => {
 
   it('caps timeout at 30s (MAX_SHELL_TIMEOUT_S)', async () => {
     await processTaskIpc(
-      { type: 'shell_command', command: `python3 ${HOME}/.boi/lib/coordination.py check`, timeout: 999 },
+      {
+        type: 'shell_command',
+        command: `python3 ${HOME}/.boi/lib/coordination.py check`,
+        timeout: 999,
+      },
       'whatsapp_main',
       true,
       deps,
@@ -268,7 +318,10 @@ describe('shell_command IPC handler', () => {
 
   it('executes valid command from main group with shell: false', async () => {
     await processTaskIpc(
-      { type: 'shell_command', command: `python3 ${HOME}/.boi/lib/coordination.py check todo.md` },
+      {
+        type: 'shell_command',
+        command: `python3 ${HOME}/.boi/lib/coordination.py check todo.md`,
+      },
       'whatsapp_main',
       true,
       deps,
