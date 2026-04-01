@@ -375,6 +375,26 @@ async function runQuery(
     globalClaudeMd = fs.readFileSync(globalClaudeMdPath, 'utf-8');
   }
 
+  // Load frozen memory snapshot
+  let memorySnapshot = '';
+  const memoryPath = '/workspace/group/MEMORY.md';
+  const userPath = '/workspace/group/USER.md';
+
+  if (fs.existsSync(memoryPath)) {
+    const memoryContent = fs.readFileSync(memoryPath, 'utf-8').trim();
+    if (memoryContent) {
+      memorySnapshot += '\n\n## Agent Memory (frozen snapshot — updates via memory_update tool write to disk, visible next session)\n' + memoryContent + '\n';
+    }
+  }
+  if (fs.existsSync(userPath)) {
+    const userContent = fs.readFileSync(userPath, 'utf-8').trim();
+    if (userContent) {
+      memorySnapshot += '\n\n## User Preferences (frozen snapshot)\n' + userContent + '\n';
+    }
+  }
+
+  const systemPromptAppend = [globalClaudeMd, memorySnapshot].filter(Boolean).join('\n');
+
   // Discover additional directories mounted at /workspace/extra/*
   // These are passed to the SDK so their CLAUDE.md files are loaded automatically
   const extraDirs: string[] = [];
@@ -398,8 +418,8 @@ async function runQuery(
       additionalDirectories: extraDirs.length > 0 ? extraDirs : undefined,
       resume: sessionId,
       resumeSessionAt: resumeAt,
-      systemPrompt: globalClaudeMd
-        ? { type: 'preset' as const, preset: 'claude_code' as const, append: globalClaudeMd }
+      systemPrompt: systemPromptAppend
+        ? { type: 'preset' as const, preset: 'claude_code' as const, append: systemPromptAppend }
         : undefined,
       allowedTools: [
         'Bash',
