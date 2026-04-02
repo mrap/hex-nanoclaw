@@ -13,7 +13,7 @@ import { logger } from '../src/logger.js';
 import { emitStatus } from './status.js';
 
 const GATEWAY_URL = 'http://127.0.0.1:10254';
-const HEALTH_ENDPOINT = `${GATEWAY_URL}/health`;
+const HEALTH_ENDPOINT = `${GATEWAY_URL}/api/health`;
 const ONECLI_CLI_PATH = path.join(os.homedir(), '.local', 'bin', 'onecli');
 const READINESS_TIMEOUT_MS = 30_000;
 const POLL_INTERVAL_MS = 1_000;

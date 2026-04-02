@@ -199,7 +199,13 @@ describe('Slack channel adapter', () => {
 
       const messageHandler = mockApp.message.mock.calls[0][0];
       await messageHandler({
-        message: { user: 'U123', channel: 'C001', text: 'hello', ts: '1711900000.000000', subtype: 'bot_message' },
+        message: {
+          user: 'U123',
+          channel: 'C001',
+          text: 'hello',
+          ts: '1711900000.000000',
+          subtype: 'bot_message',
+        },
         say: vi.fn(),
       });
 
@@ -219,7 +225,12 @@ describe('Slack channel adapter', () => {
 
       const messageHandler = mockApp.message.mock.calls[0][0];
       await messageHandler({
-        message: { user: 'U_BOT', channel: 'C001', text: 'hello', ts: '1711900000.000000' },
+        message: {
+          user: 'U_BOT',
+          channel: 'C001',
+          text: 'hello',
+          ts: '1711900000.000000',
+        },
         say: vi.fn(),
       });
 
@@ -229,7 +240,10 @@ describe('Slack channel adapter', () => {
     it('constructs correct NewMessage and calls onMessage for normal messages', async () => {
       mockSlackClient.users = {
         info: vi.fn().mockResolvedValue({
-          user: { profile: { display_name: 'Alice' }, real_name: 'Alice Smith' },
+          user: {
+            profile: { display_name: 'Alice' },
+            real_name: 'Alice Smith',
+          },
         }),
       };
 
@@ -242,19 +256,27 @@ describe('Slack channel adapter', () => {
 
       const messageHandler = mockApp.message.mock.calls[0][0];
       await messageHandler({
-        message: { user: 'U123', channel: 'C001', text: 'hello world', ts: '1711900000.000000' },
+        message: {
+          user: 'U123',
+          channel: 'C001',
+          text: 'hello world',
+          ts: '1711900000.000000',
+        },
         say: vi.fn(),
       });
 
-      expect(onMessage).toHaveBeenCalledWith('slack:C001', expect.objectContaining({
-        id: 'slack-C001-1711900000.000000',
-        chat_jid: 'slack:C001',
-        sender: 'U123',
-        sender_name: 'Alice',
-        content: 'hello world',
-        is_from_me: false,
-        is_bot_message: false,
-      }));
+      expect(onMessage).toHaveBeenCalledWith(
+        'slack:C001',
+        expect.objectContaining({
+          id: 'slack-C001-1711900000.000000',
+          chat_jid: 'slack:C001',
+          sender: 'U123',
+          sender_name: 'Alice',
+          content: 'hello world',
+          is_from_me: false,
+          is_bot_message: false,
+        }),
+      );
     });
 
     it('resolves display name via users.info', async () => {
@@ -273,7 +295,12 @@ describe('Slack channel adapter', () => {
 
       const messageHandler = mockApp.message.mock.calls[0][0];
       await messageHandler({
-        message: { user: 'U456', channel: 'C002', text: 'test', ts: '1711900001.000000' },
+        message: {
+          user: 'U456',
+          channel: 'C002',
+          text: 'test',
+          ts: '1711900001.000000',
+        },
         say: vi.fn(),
       });
 
@@ -301,11 +328,21 @@ describe('Slack channel adapter', () => {
 
       // Send two messages from the same user
       await messageHandler({
-        message: { user: 'U789', channel: 'C001', text: 'first', ts: '1711900002.000000' },
+        message: {
+          user: 'U789',
+          channel: 'C001',
+          text: 'first',
+          ts: '1711900002.000000',
+        },
         say: vi.fn(),
       });
       await messageHandler({
-        message: { user: 'U789', channel: 'C001', text: 'second', ts: '1711900003.000000' },
+        message: {
+          user: 'U789',
+          channel: 'C001',
+          text: 'second',
+          ts: '1711900003.000000',
+        },
         say: vi.fn(),
       });
 
