@@ -3,8 +3,6 @@
     "main": {
       "name": "hex",
       "folder": "main",
-      "channels": { "slack": "YOUR_SLACK_CHANNEL_NAME" },
-      "isMain": true,
       "mcpServers": {
         "playwright": { "command": "npx", "args": ["-y", "@playwright/mcp"] },
         "github": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"] },
@@ -14,38 +12,36 @@
         "exa": { "command": "npx", "args": ["-y", "exa-mcp-server"] }
       },
       "additionalMounts": [
-        { "hostPath": "~/your-workspace", "containerPath": "workspace", "readonly": false }
+        { "hostPath": "~/mrap-hex", "containerPath": "mrap-hex", "readonly": false }
       ]
     },
     "ops": {
       "name": "ops",
       "folder": "ops",
-      "channels": { "slack": "YOUR_OPS_CHANNEL_NAME" },
       "mcpServers": {
         "memory": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"] },
         "sequential-thinking": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"] }
       },
       "additionalMounts": [
-        { "hostPath": "~/your-workspace", "containerPath": "workspace", "readonly": false }
+        { "hostPath": "~/mrap-hex", "containerPath": "mrap-hex", "readonly": false },
+        { "hostPath": "~/.boi/output", "containerPath": "boi-output", "readonly": true }
       ]
     },
     "gws": {
       "name": "gws",
       "folder": "gws",
-      "channels": { "slack": "YOUR_GWS_CHANNEL_NAME" },
       "mcpServers": {},
       "additionalMounts": []
     },
     "boi": {
       "name": "boi",
       "folder": "boi",
-      "channels": { "slack": "YOUR_BOI_CHANNEL_NAME" },
       "mcpServers": {
         "memory": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"] },
         "github": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"] }
       },
       "additionalMounts": [
-        { "hostPath": "~/github.com/YOUR_USERNAME", "containerPath": "github", "readonly": false },
+        { "hostPath": "~/github.com/mrap", "containerPath": "github", "readonly": false },
         { "hostPath": "~/.boi/queue", "containerPath": "boi-queue", "readonly": false }
       ]
     }

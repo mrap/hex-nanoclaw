@@ -28,7 +28,5 @@
     <string>{{PROJECT_ROOT}}/logs/nanoclaw.log</string>
     <key>StandardErrorPath</key>
     <string>{{PROJECT_ROOT}}/logs/nanoclaw.error.log</string>
-    <key>ThrottleInterval</key>
-    <integer>10</integer>
 </dict>
 </plist>

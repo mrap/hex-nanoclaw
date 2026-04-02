@@ -48,6 +48,3 @@ groups/*/conversations/
 .nanoclaw/
 
 agents-sdk-docs
-
-# Personal config (use groups.example.json as template)
-config/groups.json

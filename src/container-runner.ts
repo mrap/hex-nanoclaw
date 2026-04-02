@@ -8,7 +8,6 @@ import path from 'path';
 
 import {
   CONTAINER_IMAGE,
-  LOCAL_CONTAINER_IMAGE,
   CONTAINER_MAX_OUTPUT_SIZE,
   CONTAINER_TIMEOUT,
   DATA_DIR,
@@ -46,27 +45,6 @@ function getGroupMcpConfig(groupFolder: string): Record<string, unknown> {
     );
   } catch {
     return {};
-  }
-}
-
-/**
- * Load per-group model runtime configuration from config/groups.json.
- * Returns 'claude' (default) or 'local' with the local model name.
- */
-function getGroupModelRuntime(groupFolder: string): {
-  runtime: 'claude' | 'local';
-  localModel: string;
-} {
-  try {
-    const configPath = path.join(process.cwd(), 'config', 'groups.json');
-    if (!fs.existsSync(configPath)) return { runtime: 'claude', localModel: 'qwen2.5:32b' };
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    const group = config.groups?.[groupFolder];
-    const runtime = group?.model_runtime === 'local' ? 'local' : 'claude';
-    const localModel = (group?.localModel as string) || 'qwen2.5:32b';
-    return { runtime, localModel };
-  } catch {
-    return { runtime: 'claude', localModel: 'qwen2.5:32b' };
   }
 }
 
@@ -305,20 +283,11 @@ async function buildContainerArgs(
   mounts: VolumeMount[],
   containerName: string,
   agentIdentifier?: string,
-  image?: string,
-  extraEnv?: Record<string, string>,
 ): Promise<string[]> {
   const args: string[] = ['run', '-i', '--rm', '--name', containerName];
 
   // Pass host timezone so container's local time matches the user's
   args.push('-e', `TZ=${TIMEZONE}`);
-
-  // Extra env vars (e.g. LOCAL_MODEL_URL, MODEL_NAME for local runtime)
-  if (extraEnv) {
-    for (const [key, value] of Object.entries(extraEnv)) {
-      args.push('-e', `${key}=${value}`);
-    }
-  }
 
   // OneCLI gateway handles credential injection — containers never see real secrets.
   // The gateway intercepts HTTPS traffic and injects API keys or OAuth tokens.
@@ -356,7 +325,7 @@ async function buildContainerArgs(
     }
   }
 
-  args.push(image ?? CONTAINER_IMAGE);
+  args.push(CONTAINER_IMAGE);
 
   return args;
 }
@@ -379,32 +348,10 @@ export async function runContainerAgent(
   const agentIdentifier = input.isMain
     ? undefined
     : group.folder.toLowerCase().replace(/_/g, '-');
-
-  // Determine which image and env to use based on model_runtime config
-  const { runtime: modelRuntime, localModel } = getGroupModelRuntime(group.folder);
-  const containerImage = modelRuntime === 'local' ? LOCAL_CONTAINER_IMAGE : undefined;
-  const extraEnv =
-    modelRuntime === 'local'
-      ? {
-          LOCAL_MODEL_URL: 'http://host.docker.internal:11434',
-          MODEL_NAME: localModel,
-          GROUP_NAME: group.folder,
-        }
-      : undefined;
-
-  if (modelRuntime === 'local') {
-    logger.info(
-      { group: group.name, model: localModel },
-      'Using local model runtime (Ollama)',
-    );
-  }
-
   const containerArgs = await buildContainerArgs(
     mounts,
     containerName,
     agentIdentifier,
-    containerImage,
-    extraEnv,
   );
 
   logger.debug(

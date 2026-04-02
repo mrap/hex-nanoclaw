@@ -837,22 +837,6 @@ export async function processTaskIpc(
       break;
     }
 
-    case 'restart_nanoclaw': {
-      // Authorization: only main group can request a restart
-      if (!isMain) {
-        logger.warn(
-          { sourceGroup },
-          'restart_nanoclaw BLOCKED: non-main group',
-        );
-        break;
-      }
-      const reason = (data as any).reason || 'agent-requested restart';
-      logger.info({ reason }, '[IPC] restart_nanoclaw requested');
-      // Graceful restart: exit with code 0, LaunchAgent/systemd will restart
-      setTimeout(() => process.exit(0), 500);
-      break;
-    }
-
     default:
       logger.warn({ type: data.type }, 'Unknown IPC task type');
   }

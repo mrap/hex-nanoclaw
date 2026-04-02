@@ -63,7 +63,6 @@ import {
 } from './sender-allowlist.js';
 import { startSchedulerLoop } from './task-scheduler.js';
 import { Channel, NewMessage, RegisteredGroup } from './types.js';
-import { autoRegisterGroups, loadGroupsConfig } from './group-auto-register.js';
 import { logger } from './logger.js';
 
 // Policy engine imports
@@ -676,45 +675,6 @@ async function main(): Promise<void> {
   if (channels.length === 0) {
     logger.fatal('No channels connected');
     process.exit(1);
-  }
-
-  // Auto-register groups from config/groups.json
-  const groupsConfigDir = path.join(process.cwd(), 'config');
-  const groupsConfigPath = path.join(groupsConfigDir, 'groups.json');
-  const groupsConfig = loadGroupsConfig(groupsConfigDir);
-  if (groupsConfig) {
-    const channelType = getRegisteredChannelNames()[0] || 'slack';
-    const count = autoRegisterGroups(
-      groupsConfig,
-      channelType,
-      getAllChats(),
-      new Set(Object.keys(registeredGroups)),
-      registerGroup,
-    );
-    if (count > 0) {
-      logger.info({ count }, 'Auto-registered groups from config');
-    }
-  }
-
-  // Hot-reload groups.json when it changes
-  if (fs.existsSync(groupsConfigPath)) {
-    fs.watch(groupsConfigPath, { persistent: false }, (eventType) => {
-      if (eventType === 'change') {
-        logger.info('[Config] groups.json changed, reloading...');
-        const reloaded = loadGroupsConfig(groupsConfigDir);
-        if (reloaded) {
-          const channelType = getRegisteredChannelNames()[0] || 'slack';
-          const count = autoRegisterGroups(
-            reloaded,
-            channelType,
-            getAllChats(),
-            new Set(Object.keys(registeredGroups)),
-            registerGroup,
-          );
-          logger.info({ count }, 'Hot-reloaded groups from config/groups.json');
-        }
-      }
-    });
   }
 
   // Start subsystems (independently of connection handler)
