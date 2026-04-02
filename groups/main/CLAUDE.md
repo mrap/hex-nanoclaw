@@ -715,3 +715,66 @@ Use `memory_update` MCP tool with `store` ("memory" or "user"), `action` ("add",
 **Priority:** Save what reduces future user corrections. A memory that prevents a repeated mistake is more valuable than a general observation.
 
 **Memory is frozen at session start.** Your writes update the file on disk immediately but you won't see them in your system prompt until the next session.
+
+---
+
+## Self-Diagnosis
+
+You are running inside a NanoClaw container. When things go wrong — messages stop flowing, API calls fail, or you suspect infrastructure issues — run through this diagnostic runbook before escalating.
+
+### Diagnostic Runbook
+
+Run these checks in order. Stop at the first failure and follow the corresponding fix in Known Failure Patterns below.
+
+**1. Check NanoClaw process count (should be exactly 1):**
+```bash
+pgrep -f 'hex-nanoclaw/dist/index' | wc -l
+```
+
+**2. Check running containers:**
+```bash
+docker ps --filter 'name=nanoclaw-' --format '{{.Names}}'
+```
+
+**3. Check OneCLI health (credential proxy):**
+```bash
+docker ps --filter 'name=onecli-app' --format '{{.Status}}'
+```
+
+**4. Check recent errors:**
+```bash
+tail -20 ~/github.com/mrap/hex-nanoclaw/logs/nanoclaw-error.log
+```
+
+**5. Check message loop:**
+```bash
+tail -10 ~/github.com/mrap/hex-nanoclaw/logs/nanoclaw.log
+```
+
+### Known Failure Patterns
+
+| # | Symptom | Cause | Fix |
+|---|---------|-------|-----|
+| 1 | Two or more containers with your group name | Container spawning race in GroupQueue | Kill the older container: `docker kill <older-container-id>`. The newer one continues normally. |
+| 2 | "Invalid API key" errors | OneCLI credential proxy not injecting keys | Check OneCLI is running (step 3 above). If down, restart it: `docker compose -f ~/.onecli/docker-compose.yml restart` |
+| 3 | No agent output for 10+ minutes | Message loop stalled in NanoClaw | Restart NanoClaw: `kill $(pgrep -f 'hex-nanoclaw/dist/index')` — the LaunchAgent auto-restarts the process within seconds. |
+| 4 | Container exits with code 137 | Container was killed during a NanoClaw restart | Not a real error. Verify the restart was intentional (check logs). No action needed if NanoClaw restarted successfully. |
+
+### Self-Fix Protocol
+
+When you detect a problem:
+
+1. **Identify** — Run the diagnostic runbook. Note which check failed.
+2. **Fix** — Apply the corresponding fix from Known Failure Patterns.
+3. **Verify** — Re-run the failed check to confirm the fix worked.
+4. **Log** — Record what happened and what you did. Include timestamps.
+
+### Escalation
+
+If **3 self-fix attempts fail on the same issue**, stop trying and alert Mike:
+
+- **Where:** Post in the primary channel with a clear summary.
+- **What to include:** What failed, what was tried (with timestamps), recommended manual action.
+- **Do not** continue retrying in a loop. Three strikes means the problem needs human eyes.
+
+Post system-wide improvements or recovered-from incidents to the announcements channel so the team stays informed.
