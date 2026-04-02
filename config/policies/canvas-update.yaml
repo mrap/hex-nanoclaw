@@ -1,0 +1,32 @@
+name: canvas-update
+description: "Update hex-main canvas on task events and system start"
+lifecycle: persistent
+enabled: true
+rules:
+  - name: update-on-start
+    trigger:
+      event: "system.started"
+    actions:
+      - type: shell
+        command: "bash ~/github.com/mrap/hex-nanoclaw/scripts/update-canvas.sh"
+
+  - name: update-on-task-complete
+    trigger:
+      event: "task.completed"
+    actions:
+      - type: shell
+        command: "bash ~/github.com/mrap/hex-nanoclaw/scripts/update-canvas.sh"
+
+  - name: update-on-task-fail
+    trigger:
+      event: "task.failed"
+    actions:
+      - type: shell
+        command: "bash ~/github.com/mrap/hex-nanoclaw/scripts/update-canvas.sh"
+
+  - name: update-on-container-exit
+    trigger:
+      event: "container.exit"
+    actions:
+      - type: shell
+        command: "bash ~/github.com/mrap/hex-nanoclaw/scripts/update-canvas.sh"
