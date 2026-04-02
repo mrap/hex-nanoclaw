@@ -34,6 +34,18 @@ export function createSlackChannel(opts: ChannelOpts): Channel | null {
   /** Cache display names to avoid hitting Slack rate limits on users.info */
   const displayNameCache = new Map<string, string>();
 
+  /** Dedup incoming Slack messages by channel+ts; duplicates typically arrive within seconds */
+  const seenMessages = new Map<string, ReturnType<typeof setTimeout>>();
+
+  function isDuplicate(channelId: string, ts: string): boolean {
+    const key = `${channelId}:${ts}`;
+    if (seenMessages.has(key)) return true;
+    const timer = setTimeout(() => seenMessages.delete(key), 60_000);
+    if (typeof timer === 'object') (timer as NodeJS.Timeout).unref?.();
+    seenMessages.set(key, timer);
+    return false;
+  }
+
   async function discoverChannels(): Promise<void> {
     try {
       let cursor: string | undefined;
@@ -77,6 +89,8 @@ export function createSlackChannel(opts: ChannelOpts): Channel | null {
 
     const jid = toJid(channelId);
     const ts = message.ts || new Date().toISOString();
+
+    if (isDuplicate(channelId, ts)) return;
 
     let senderName = displayNameCache.get(message.user) ?? '';
     if (!senderName) {
