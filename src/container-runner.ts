@@ -304,6 +304,26 @@ async function buildContainerArgs(
     );
   }
 
+  // Pass GITHUB_TOKEN if available (needed for gh CLI and git push inside containers).
+  // Check process.env first, then read from .env file directly.
+  const githubToken =
+    process.env.GITHUB_TOKEN ||
+    (() => {
+      try {
+        const envContent = fs.readFileSync(
+          path.join(process.cwd(), '.env'),
+          'utf-8',
+        );
+        const match = envContent.match(/^GITHUB_TOKEN=(.+)$/m);
+        return match?.[1]?.trim();
+      } catch {
+        return undefined;
+      }
+    })();
+  if (githubToken) {
+    args.push('-e', `GITHUB_TOKEN=${githubToken}`);
+  }
+
   // Runtime-specific args for host gateway resolution
   args.push(...hostGatewayArgs());
 
@@ -344,10 +364,8 @@ export async function runContainerAgent(
   const mounts = buildVolumeMounts(group, input.isMain);
   const safeName = group.folder.replace(/[^a-zA-Z0-9-]/g, '-');
   const containerName = `nanoclaw-${safeName}-${Date.now()}`;
-  // Main group uses the default OneCLI agent; others use their own agent.
-  const agentIdentifier = input.isMain
-    ? undefined
-    : group.folder.toLowerCase().replace(/_/g, '-');
+  // All groups use the default OneCLI agent (per-group agents not registered).
+  const agentIdentifier = undefined;
   const containerArgs = await buildContainerArgs(
     mounts,
     containerName,
