@@ -1,0 +1,15 @@
+name: trajectory-tag-on-session-end
+description: "Tag and analyze completed sessions for trajectory replay and SO violation detection"
+lifecycle: persistent
+enabled: true
+rules:
+  - name: tag-session-on-stop
+    trigger:
+      event: "agent.session.stopped"
+    conditions: []
+    actions:
+      - type: emit
+        event: "session.pipeline.run"
+        payload:
+          transcript_path: "{{payload.transcript_path}}"
+          agent_dir: "{{payload.agent_dir}}"

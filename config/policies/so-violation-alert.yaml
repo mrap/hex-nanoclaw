@@ -1,0 +1,16 @@
+name: so-violation-alert
+description: "Alert ops when high-severity standing order violations are detected"
+lifecycle: persistent
+enabled: true
+rules:
+  - name: alert-on-high-severity
+    trigger:
+      event: "session.so_violations"
+    conditions:
+      - field: payload.highCount
+        op: gt
+        value: 0
+    actions:
+      - type: message
+        jid: "{{ops_chat_jid}}"
+        text: "SO violation in session {{payload.sessionId}}: {{payload.highCount}} high-severity ({{payload.count}} total)"
