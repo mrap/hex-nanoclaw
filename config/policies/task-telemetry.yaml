@@ -1,0 +1,48 @@
+name: task-telemetry
+description: "Collect telemetry signals from task completions and surface friction patterns"
+lifecycle: persistent
+enabled: true
+rules:
+  - name: friction-and-error-signals
+    trigger:
+      event: "container.exit"
+    conditions:
+      - field: "exit_code"
+        op: neq
+        value: 0
+    actions:
+      - type: shell
+        timeout: 30
+        command: >
+          NC_EVENT_TYPE=container.exit
+          NC_GROUP={{ event.group }}
+          NC_DURATION_MS={{ event.duration_ms }}
+          NC_EXIT_CODE={{ event.exit_code }}
+          npx tsx src/task-telemetry.ts
+
+  - name: success-and-correction-signals
+    trigger:
+      event: "task.completed"
+    actions:
+      - type: shell
+        timeout: 30
+        command: >
+          NC_EVENT_TYPE=task.completed
+          NC_TASK_ID={{ event.task_id }}
+          NC_GROUP={{ event.group }}
+          NC_RESULT={{ event.result }}
+          npx tsx src/task-telemetry.ts
+
+# Weekly rollup is not a policy rule (policy engine has no cron trigger).
+# Schedule in the ops group using NanoClaw's task scheduler:
+#
+#   Prompt: "Query store/signals.db for the past 7 days. Report:
+#     1. Top friction tasks (signal_type='friction', group by task_id, last 7d)
+#     2. Gap signals (signal_type='gap', show task_id + detail)
+#     3. Success rate per group (successes vs friction+error counts)
+#   Write markdown to projects/system-improvement/telemetry-weekly-YYYY-WXX.md.
+#   If ≥3 friction signals OR any gap signals, post digest to slack:C0AQGHS8RNG.
+#   Otherwise write the report silently."
+#
+#   Schedule: cron 0 9 * * 1   (Monday 09:00)
+#   Group: ops
