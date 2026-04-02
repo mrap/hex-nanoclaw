@@ -84,6 +84,22 @@ function createSchema(database: Database.Database): void {
     );
   `);
 
+  // Signals table for task telemetry (run-based telemetry model)
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS signals (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      task_id     TEXT NOT NULL,
+      signal_type TEXT NOT NULL,
+      group_name  TEXT NOT NULL,
+      duration_ms INTEGER,
+      detail      TEXT,
+      recorded_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_signals_type  ON signals(signal_type, recorded_at);
+    CREATE INDEX IF NOT EXISTS idx_signals_task  ON signals(task_id);
+    CREATE INDEX IF NOT EXISTS idx_signals_group ON signals(group_name, recorded_at);
+  `);
+
   // Add context_mode column if it doesn't exist (migration for existing DBs)
   try {
     database.exec(
