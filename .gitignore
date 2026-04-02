@@ -34,34 +34,20 @@ groups/*/conversations/
 *.keys.json
 .env
 
-# Safety & environment
-.env.*
-.env.local
-.secrets
-
 # Temp files
 .tmp-*
 
 # OS
 .DS_Store
-.DS_Store?
-._*
 
 # IDE
 .idea/
 .vscode/
-*.swp
-*.swo
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-
-# Misc
-*.log
 
 # Skills system (local per-installation state)
 .nanoclaw/
 
 agents-sdk-docs
+
+# Personal config (use groups.example.json as template)
+config/groups.json
