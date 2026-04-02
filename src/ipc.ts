@@ -840,7 +840,10 @@ export async function processTaskIpc(
     case 'restart_nanoclaw': {
       // Authorization: only main group can request a restart
       if (!isMain) {
-        logger.warn({ sourceGroup }, 'restart_nanoclaw BLOCKED: non-main group');
+        logger.warn(
+          { sourceGroup },
+          'restart_nanoclaw BLOCKED: non-main group',
+        );
         break;
       }
       const reason = (data as any).reason || 'agent-requested restart';
