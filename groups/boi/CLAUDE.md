@@ -18,6 +18,44 @@ You have access to the BOI CLI (`bash ~/.boi/boi`) and can:
 
 You also have Docker socket access and can spawn worker containers for isolated execution.
 
+## Event Emission — Closing the Loop
+
+After every spec completes or fails, emit the result event via IPC so the policy engine and hex-ops can react.
+
+**How to emit an event:**
+
+Write a JSON file to `/workspace/project/data/ipc/boi/messages/<timestamp>.json`:
+
+```json
+{
+  "type": "emit_event",
+  "event_type": "boi.spec.completed",
+  "payload": {
+    "spec_id": "<spec_id>",
+    "target_repo": "<repo_name>",
+    "summary": "<one-line summary of what was done>"
+  },
+  "source": "container:boi"
+}
+```
+
+For failures, use `boi.spec.failed` with payload:
+```json
+{
+  "type": "emit_event",
+  "event_type": "boi.spec.failed",
+  "payload": {
+    "spec_id": "<spec_id>",
+    "error": "<what went wrong>"
+  },
+  "source": "container:boi"
+}
+```
+
+Use a unique filename, e.g.: `$(date +%s%N)-boi-complete.json`
+
+The policy engine picks up IPC files within ~100ms and fires `boi-completion-notify` policy automatically.
+
 ## Available Tools
 
 - BOI CLI (dispatch, status, retry)
