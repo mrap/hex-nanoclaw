@@ -34,6 +34,27 @@ groups/*/conversations/
 *.keys.json
 .env
 
+# Safety & environment
+.env.*
+.env.local
+.secrets
+
+# macOS system files
+.DS_Store?
+._*
+
+# IDEs and editors
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Misc
+*.log
+
 # Temp files
 .tmp-*
 
