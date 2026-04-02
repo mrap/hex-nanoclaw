@@ -14,7 +14,8 @@
         "exa": { "command": "npx", "args": ["-y", "exa-mcp-server"] }
       },
       "additionalMounts": [
-        { "hostPath": "~/mrap-hex", "containerPath": "mrap-hex", "readonly": false }
+        { "hostPath": "~/mrap-hex", "containerPath": "mrap-hex", "readonly": false },
+        { "hostPath": "~/github.com/mrap", "containerPath": "github", "readonly": false }
       ]
     },
     "ops": {
