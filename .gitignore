@@ -39,42 +39,17 @@ groups/*/conversations/
 .env.local
 .secrets
 
-# macOS system files
-.DS_Store?
-._*
-
-# IDEs and editors
-*.swp
-*.swo
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-
-# Misc
-*.log
-
 # Temp files
 .tmp-*
 
 # OS
 .DS_Store
+.DS_Store?
+._*
 
 # IDE
 .idea/
 .vscode/
-
-# Safety & environment
-.env.*
-.env.local
-.secrets
-
-# macOS system files
-.DS_Store?
-._*
-
-# IDEs and editors
 *.swp
 *.swo
 

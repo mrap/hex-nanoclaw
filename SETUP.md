@@ -247,3 +247,11 @@ git merge upstream/main
 # Conflicts will only be in: src/ipc.ts, Dockerfile
 # All other hex-specific files are additive
 ```
+
+## Global gitignore
+
+A global gitignore template is included at `config/gitignore_global`. Install it on each container:
+
+```bash
+git config --global core.excludesfile ~/github.com/mrap/hex-nanoclaw/config/gitignore_global
+```
