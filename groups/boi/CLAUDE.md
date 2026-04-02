@@ -117,3 +117,15 @@ Use `memory_update` MCP tool with `store` ("memory" or "user"), `action` ("add",
 **Priority:** Save what reduces future user corrections. A memory that prevents a repeated mistake is more valuable than a general observation.
 
 **Memory is frozen at session start.** Your writes update the file on disk immediately but you won't see them in your system prompt until the next session.
+
+## Triggering a NanoClaw Restart
+
+To restart NanoClaw (e.g., after updating config or .env), write an IPC message:
+
+```bash
+cat > /workspace/project/data/ipc/main/messages/$(date +%s%N)-restart.json << 'EOF'
+{"type":"restart_nanoclaw","reason":"your reason here"}
+EOF
+```
+
+NanoClaw will exit cleanly and the LaunchAgent will restart it within 10 seconds.

@@ -704,7 +704,9 @@ async function main(): Promise<void> {
   }
 
   // Auto-register groups from config/groups.json
-  const groupsConfig = loadGroupsConfig(path.join(process.cwd(), 'config'));
+  const groupsConfigDir = path.join(process.cwd(), 'config');
+  const groupsConfigPath = path.join(groupsConfigDir, 'groups.json');
+  const groupsConfig = loadGroupsConfig(groupsConfigDir);
   if (groupsConfig) {
     const channelType = getRegisteredChannelNames()[0] || 'slack';
     const count = autoRegisterGroups(
@@ -717,6 +719,27 @@ async function main(): Promise<void> {
     if (count > 0) {
       logger.info({ count }, 'Auto-registered groups from config');
     }
+  }
+
+  // Hot-reload groups.json when it changes
+  if (fs.existsSync(groupsConfigPath)) {
+    fs.watch(groupsConfigPath, { persistent: false }, (eventType) => {
+      if (eventType === 'change') {
+        logger.info('[Config] groups.json changed, reloading...');
+        const reloaded = loadGroupsConfig(groupsConfigDir);
+        if (reloaded) {
+          const channelType = getRegisteredChannelNames()[0] || 'slack';
+          const count = autoRegisterGroups(
+            reloaded,
+            channelType,
+            getAllChats(),
+            new Set(Object.keys(registeredGroups)),
+            registerGroup,
+          );
+          logger.info({ count }, 'Hot-reloaded groups from config/groups.json');
+        }
+      }
+    });
   }
 
   // Start subsystems (independently of connection handler)
