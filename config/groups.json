@@ -21,6 +21,8 @@
       "name": "ops",
       "folder": "ops",
       "channels": { "slack": "hex-ops" },
+      "model_runtime": "local",
+      "localModel": "qwen2.5:32b",
       "mcpServers": {
         "memory": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-memory"] },
         "sequential-thinking": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"] }
